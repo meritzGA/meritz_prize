@@ -27,10 +27,10 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (토스 스타일 라이트 테마) ---
+# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 적용) ---
 st.markdown("""
 <style>
-    /* 전체 배경을 토스 스타일의 밝은 회색으로 고정 */
+    /* 전체 배경을 밝은 회색으로 고정 */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     
     /* 상단 메뉴(라디오 버튼) 탭 스타일로 변경 */
@@ -40,9 +40,9 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
-    /* 🌟 심플한 파란색 타이틀 띠지 (버튼과 동일한 디자인) 🌟 */
+    /* 🌟 메리츠 레드 타이틀 띠지 🌟 */
     .title-band {
-        background-color: #3182f6;
+        background-color: rgb(128, 0, 0);
         color: #ffffff;
         font-size: 1.4rem;
         font-weight: 800;
@@ -51,10 +51,10 @@ st.markdown("""
         border-radius: 12px;
         margin-bottom: 24px;
         letter-spacing: -0.5px;
-        box-shadow: 0 4px 10px rgba(49, 130, 246, 0.2);
+        box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
-    /* 스트림릿 입력 폼(Form) 자체를 하얀색 카드로 만듦 (의미없는 빈 박스 제거) */
+    /* 스트림릿 입력 폼(Form) 자체를 하얀색 카드로 만듦 */
     [data-testid="stForm"] {
         background-color: #ffffff;
         padding: 24px;
@@ -64,11 +64,11 @@ st.markdown("""
         margin-bottom: 24px;
     }
 
-    /* 요약 카드 */
+    /* 🌟 요약 카드 (메리츠 레드 그라데이션) 🌟 */
     .summary-card { 
-        background: linear-gradient(135deg, #3182f6 0%, #1b64da 100%); 
+        background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
-        box-shadow: 0 10px 25px rgba(49, 130, 246, 0.25);
+        box-shadow: 0 10px 25px rgba(128, 0, 0, 0.25);
     }
     .summary-label { color: rgba(255,255,255,0.85); font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
     .summary-total { color: #ffffff; font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; }
@@ -90,16 +90,16 @@ st.markdown("""
     .data-label { color: #8b95a1; font-size: 1.1rem; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
     
-    /* 시상금 강조 행 */
+    /* 시상금 강조 행 (포인트 컬러: 메리츠 레드) */
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
     .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
-    .prize-value { color: #3182f6; font-size: 2rem; font-weight: 800; } 
+    .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
     
     /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 🌟 시니어 입력창 확대 🌟 */
+    /* 🌟 시니어 입력창 확대 및 메리츠 컬러 버튼 🌟 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #f9fafb !important; color: #191f28 !important;
@@ -107,7 +107,7 @@ st.markdown("""
     }
     div[data-testid="stFormSubmitButton"] button {
         font-size: 1.3rem !important; font-weight: 800 !important; height: 55px !important;
-        border-radius: 12px !important; background-color: #3182f6 !important;
+        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important; /* 버튼 색상 변경 */
         color: white !important; border: none !important; width: 100%;
     }
 </style>
@@ -217,13 +217,12 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.success("서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
 # ==========================================
-# 🏆 3. 사용자 모드 (심플 띠지 배너 + 토스 UI)
+# 🏆 3. 사용자 모드 (메리츠 스타일)
 # ==========================================
 else:
-    # 파란색 띠지 (버튼 디자인과 동일)
+    # 🌟 메리츠 레드 띠지 🌟
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     
-    # 의미없는 빈 박스를 없애고, 폼(form) 자체를 하얀색 카드로 스타일링
     with st.form("search_form"):
         user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
         phone_last4 = st.text_input("비밀번호 (기본: 0000)", value="0000", max_chars=4, type="password")
