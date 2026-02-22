@@ -27,7 +27,7 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (메리츠 컬러 & 깨진 아이콘 숨기기) ---
+# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
 st.markdown("""
 <style>
     /* 전체 배경을 밝은 회색으로 고정 */
@@ -51,12 +51,6 @@ st.markdown("""
         background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
         text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
         letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
-    }
-
-    /* 스트림릿 입력 폼(Form) 카드로 만듦 */
-    [data-testid="stForm"] {
-        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
     }
 
     /* 요약 카드 */
@@ -84,7 +78,7 @@ st.markdown("""
     .data-label { color: #8b95a1; font-size: 1.1rem; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
     
-    /* 시상금 강조 행 (포인트 컬러: 메리츠 레드) */
+    /* 시상금 강조 행 */
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
     .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
@@ -96,13 +90,19 @@ st.markdown("""
     /* 🌟 시니어 입력창 확대 및 메리츠 컬러 버튼 🌟 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
-        background-color: #f9fafb !important; color: #191f28 !important;
+        background-color: #ffffff !important; color: #191f28 !important;
         border: 1px solid #e5e8eb !important; border-radius: 12px !important;
     }
-    div[data-testid="stFormSubmitButton"] button {
-        font-size: 1.3rem !important; font-weight: 800 !important; height: 55px !important;
+    div[data-testid="stSelectbox"] > div {
+        background-color: #ffffff !important;
+        border: 1px solid #e5e8eb !important; border-radius: 12px !important;
+    }
+    div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
+    
+    div.stButton > button {
+        font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
-        color: white !important; border: none !important; width: 100%;
+        color: white !important; border: none !important; width: 100%; margin-top: 15px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -155,16 +155,18 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.session_state['config'].append({
                 "name": f"신규 시책 {len(st.session_state['config'])+1}",
                 "desc": "", "type": "구간 시책", 
-                "file": first_file, "col_name": "", "col_branch": "", 
+                "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", 
                 "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
                 "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
             })
 
         for i, cfg in enumerate(st.session_state['config']):
-            # 기존 데이터 호환성 보장
+            # 기존 데이터 호환성 보장 및 새로운 컬럼(사번, 대리점명) 추가
             if 'desc' not in cfg: cfg['desc'] = ""
             if 'type' not in cfg: cfg['type'] = "구간 시책"
+            if 'col_code' not in cfg: cfg['col_code'] = ""
             if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') 
+            if 'col_agency' not in cfg: cfg['col_agency'] = ""
             if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
             if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
             if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
@@ -183,11 +185,11 @@ if mode == "⚙️ 시스템 관리자 모드":
                 cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
                 def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
+                st.info("💡 동명이인 식별을 위해 아래 4개 컬럼을 정확히 지정해주세요.")
                 cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
-                
-                # 💡 [중요] 사용자가 지점조직명을 선택할 수 있도록 안내
-                st.info("※ 지점별 코드로 검색하려면 반드시 아래를 '지점조직명'으로 선택하세요.")
+                cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
                 cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
+                cfg['col_agency'] = st.selectbox("대리점/지사(소속) 컬럼", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
                 
                 if "구간" in cfg['type'] or "2기간" in cfg['type']:
                     col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
@@ -225,119 +227,152 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.success("서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
 # ==========================================
-# 🏆 3. 사용자 모드 (메리츠 스타일)
+# 🏆 3. 사용자 모드
 # ==========================================
 else:
-    # 🌟 메리츠 레드 띠지 🌟
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     
-    with st.form("search_form"):
-        user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
-        branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
-        submit = st.form_submit_button("내 실적 확인하기")
+    # 동명이인 검색을 위해 st.form 대신 실시간 반응형 입력창 사용
+    st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>정보를 입력하세요</h3>", unsafe_allow_html=True)
+    user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
+    branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
+
+    # --- 동명이인 및 데이터 매칭 로직 ---
+    matched_configs = {}
+    agencies_found = set()
+    needs_disambiguation = False
+
+    if user_name and branch_code_input:
+        for i, cfg in enumerate(st.session_state['config']):
+            df = st.session_state['raw_data'].get(cfg['file'])
+            if df is not None:
+                # 1. 이름 매칭
+                search_name = df[cfg['col_name']].fillna('').astype(str).str.strip()
+                name_match_condition = (search_name == user_name.strip())
+                
+                # 2. 지점코드 정규식 매칭 (숫자만 입력 시 정확히 해당 숫자 지점만 검색)
+                if branch_code_input.strip() == "0000": 
+                    match = df[name_match_condition]
+                else:
+                    clean_code = branch_code_input.replace("지점", "").strip()
+                    if clean_code:
+                        search_branch = df[cfg['col_branch']].fillna('').astype(str)
+                        # 부정형 전방탐색 (?<!\d) : 입력한 숫자 앞에 다른 숫자가 없어야 함 (1입력시 11지점 방지)
+                        regex_pattern = rf"(?<!\d){clean_code}\s*지점"
+                        match = df[name_match_condition & search_branch.str.contains(regex_pattern, regex=True)]
+                    else:
+                        match = pd.DataFrame()
+                
+                if not match.empty:
+                    matched_configs[i] = match
+                    if len(match) > 1:
+                        needs_disambiguation = True
+                    # 소속 대리점/지사명 수집
+                    if 'col_agency' in cfg and cfg['col_agency']:
+                        agencies_found.update(match[cfg['col_agency']].fillna('').astype(str).str.strip().unique().tolist())
+
+    # 빈 문자열 제거
+    agencies_found = {a for a in agencies_found if a}
+    
+    selected_agency = None
+    if needs_disambiguation and len(agencies_found) > 1:
+        st.warning("⚠️ 동일한 이름과 지점을 가진 동명이인이 존재합니다. 본인의 소속(대리점/지사)을 선택해주세요.")
+        selected_agency = st.selectbox("소속 선택", sorted(list(agencies_found)))
+
+    # 확인 버튼
+    submit = st.button("내 실적 확인하기")
 
     if submit:
-        if not user_name:
-            st.warning("이름을 입력해주세요.")
+        if not user_name or not branch_code_input:
+            st.warning("이름과 지점코드를 입력해주세요.")
         elif not st.session_state['config']:
             st.warning("현재 진행 중인 시책 데이터가 없습니다.")
+        elif not matched_configs:
+            st.error("일치하는 정보가 없습니다. 이름과 지점코드를 다시 확인해주세요.")
         else:
             calculated_results = []
             total_prize_sum = 0
             
-            for cfg in st.session_state['config']:
-                if cfg['file'] in st.session_state['raw_data']:
-                    df = st.session_state['raw_data'][cfg['file']]
-                    try:
-                        # 이름 매칭
-                        search_name = df[cfg['col_name']].fillna('').astype(str).str.strip()
-                        name_match_condition = (search_name == user_name.strip())
-                        
-                        # 지점코드 매칭 (띄어쓰기가 있어도 찾을 수 있도록 정규식 보강)
-                        if branch_code_input.strip() == "0000": 
-                            match = df[name_match_condition]
-                        else:
-                            clean_code = branch_code_input.replace("지점", "").strip()
-                            if clean_code:
-                                search_branch = df[cfg['col_branch']].fillna('').astype(str)
-                                # 앞 글자가 숫자가 아니면서, 해당 숫자 뒤에 '지점'이 붙는 문자열 찾기 (스페이스바 허용)
-                                regex_pattern = rf"(?<!\d){clean_code}\s*지점"
-                                match = df[name_match_condition & search_branch.str.contains(regex_pattern, regex=True)]
-                            else:
-                                match = pd.DataFrame() 
-                        
-                        if not match.empty:
-                            p_type = cfg.get('type', '구간 시책')
-                            
-                            # 1) 일반 구간 시책
-                            if "구간" in p_type:
-                                raw_val = match[cfg['col_val']].values[0]
-                                try: val = float(str(raw_val).replace(',', ''))
-                                except: val = 0.0
+            for i, match_df in matched_configs.items():
+                cfg = st.session_state['config'][i]
+                
+                # 동명이인이 발생하여 사용자가 소속을 선택한 경우 데이터 필터링
+                if selected_agency and 'col_agency' in cfg and cfg['col_agency']:
+                    match_df = match_df[match_df[cfg['col_agency']].fillna('').astype(str).str.strip() == selected_agency]
+                
+                if match_df.empty:
+                    continue
+                
+                p_type = cfg.get('type', '구간 시책')
+                
+                # 1) 일반 구간 시책
+                if "구간" in p_type:
+                    raw_val = match_df[cfg['col_val']].values[0]
+                    try: val = float(str(raw_val).replace(',', ''))
+                    except: val = 0.0
+                    
+                    calc_rate, tier_achieved, prize = 0, 0, 0
+                    for amt, rate in cfg['tiers']:
+                        if val >= amt:
+                            tier_achieved = amt
+                            calc_rate = rate
+                            prize = tier_achieved * (calc_rate / 100) 
+                            break
+                    
+                    calculated_results.append({
+                        "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "구간",
+                        "val": val, "tier": tier_achieved, "rate": calc_rate, "prize": prize
+                    })
+                    total_prize_sum += prize
+                    
+                # 2) 브릿지 1기간 (시상금 확정용)
+                elif "1기간" in p_type: 
+                    raw_prev = match_df[cfg['col_val_prev']].values[0]
+                    raw_curr = match_df[cfg['col_val_curr']].values[0]
+                    try: val_prev = float(str(raw_prev).replace(',', ''))
+                    except: val_prev = 0.0
+                    try: val_curr = float(str(raw_curr).replace(',', ''))
+                    except: val_curr = 0.0
+                    
+                    curr_req = float(cfg['curr_req'])
+                    calc_rate, tier_prev, prize = 0, 0, 0
+                    
+                    if val_curr >= curr_req:
+                        for amt, rate in cfg['tiers']:
+                            if val_prev >= amt:
+                                tier_prev = amt
+                                calc_rate = rate
+                                prize = (tier_prev + curr_req) * (calc_rate / 100)
+                                break
                                 
-                                calc_rate, tier_achieved, prize = 0, 0, 0
-                                for amt, rate in cfg['tiers']:
-                                    if val >= amt:
-                                        tier_achieved = amt
-                                        calc_rate = rate
-                                        prize = tier_achieved * (calc_rate / 100) 
-                                        break
-                                
-                                calculated_results.append({
-                                    "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "구간",
-                                    "val": val, "tier": tier_achieved, "rate": calc_rate, "prize": prize
-                                })
-                                total_prize_sum += prize
-                                
-                            # 2) 브릿지 1기간 (시상금 확정용)
-                            elif "1기간" in p_type: 
-                                raw_prev = match[cfg['col_val_prev']].values[0]
-                                raw_curr = match[cfg['col_val_curr']].values[0]
-                                try: val_prev = float(str(raw_prev).replace(',', ''))
-                                except: val_prev = 0.0
-                                try: val_curr = float(str(raw_curr).replace(',', ''))
-                                except: val_curr = 0.0
-                                
-                                curr_req = float(cfg['curr_req'])
-                                calc_rate, tier_prev, prize = 0, 0, 0
-                                
-                                if val_curr >= curr_req:
-                                    for amt, rate in cfg['tiers']:
-                                        if val_prev >= amt:
-                                            tier_prev = amt
-                                            calc_rate = rate
-                                            prize = (tier_prev + curr_req) * (calc_rate / 100)
-                                            break
-                                            
-                                calculated_results.append({
-                                    "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지1",
-                                    "val_prev": val_prev, "tier_prev": tier_prev,
-                                    "val_curr": val_curr, "curr_req": curr_req,
-                                    "rate": calc_rate, "prize": prize
-                                })
-                                total_prize_sum += prize
-                                
-                            # 3) 브릿지 2기간 (차월 구간 확보용)
-                            elif "2기간" in p_type:
-                                raw_curr = match[cfg['col_val_curr']].values[0]
-                                try: val_curr = float(str(raw_curr).replace(',', ''))
-                                except: val_curr = 0.0
-                                
-                                calc_rate, tier_achieved = 0, 0
-                                for amt, rate in cfg['tiers']:
-                                    if val_curr >= amt:
-                                        tier_achieved = amt
-                                        calc_rate = rate
-                                        break
-                                
-                                calculated_results.append({
-                                    "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
-                                    "val": val_curr, "tier": tier_achieved, "rate": calc_rate
-                                })
-                    except Exception as e:
-                        pass 
+                    calculated_results.append({
+                        "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지1",
+                        "val_prev": val_prev, "tier_prev": tier_prev,
+                        "val_curr": val_curr, "curr_req": curr_req,
+                        "rate": calc_rate, "prize": prize
+                    })
+                    total_prize_sum += prize
+                    
+                # 3) 브릿지 2기간 (차월 구간 확보용)
+                elif "2기간" in p_type:
+                    raw_curr = match_df[cfg['col_val_curr']].values[0]
+                    try: val_curr = float(str(raw_curr).replace(',', ''))
+                    except: val_curr = 0.0
+                    
+                    calc_rate, tier_achieved = 0, 0
+                    for amt, rate in cfg['tiers']:
+                        if val_curr >= amt:
+                            tier_achieved = amt
+                            calc_rate = rate
+                            break
+                    
+                    calculated_results.append({
+                        "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
+                        "val": val_curr, "tier": tier_achieved, "rate": calc_rate
+                    })
 
             if len(calculated_results) > 0:
+                # 1) 요약표 렌더링
                 summary_html = f"""<div class="summary-card">
 <div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
 <div class="summary-total">{total_prize_sum:,.0f}원</div>
@@ -349,7 +384,7 @@ else:
 <span class="summary-item-name">{res['name']}</span>
 <span class="summary-item-val">{res['prize']:,.0f}원</span>
 </div>"""
-                    else:
+                    else: # 브릿지 2기간
                         summary_html += f"""<div class="data-row" style="padding: 6px 0;">
 <span class="summary-item-name">{res['name']}</span>
 <span class="summary-item-val" style="color:rgba(255,255,255,0.7);">{res['tier']:,.0f}원 구간 확보</span>
@@ -357,6 +392,7 @@ else:
                 summary_html += "</div>"
                 st.markdown(summary_html, unsafe_allow_html=True)
                 
+                # 2) 개별 상세 카드 렌더링
                 for res in calculated_results:
                     if res['type'] == "구간":
                         card_html = f"""<div class="toss-card">
@@ -406,5 +442,3 @@ else:
 </div>
 </div>"""
                     st.markdown(card_html, unsafe_allow_html=True)
-            else:
-                st.error("일치하는 정보가 없습니다. 이름과 지점코드를 다시 확인해주세요.")
