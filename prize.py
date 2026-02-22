@@ -180,9 +180,11 @@ if mode == "⚙️ 시스템 관리자 모드":
                 cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
                 def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
-                st.info("💡 동명이인 식별을 위해 아래 컬럼을 정확히 지정해주세요.")
+                st.info("💡 동명이인 식별을 위해 아래 4개 컬럼을 정확히 지정해주세요.")
                 cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
+                cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
                 cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
+                cfg['col_agency'] = st.selectbox("대리점/지사(소속) 컬럼", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
                 
                 if "구간" in cfg['type'] or "2기간" in cfg['type']:
                     col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
@@ -223,10 +225,7 @@ if mode == "⚙️ 시스템 관리자 모드":
 else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     
-    st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>정보를 입력하세요</h3>", unsafe_allow_html=True)
-    
-    # st.form 대신 바로 입력받도록 변경 (실시간 반응형 박스 처리 위함)
-    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
@@ -256,7 +255,7 @@ else:
                 
                 if not match.empty:
                     matched_configs[i] = match
-                    # 🌟 지점명만 추출하여 셋(Set)에 담기 🌟
+                    # 지점명만 추출하여 셋(Set)에 담기
                     if 'col_branch' in cfg and cfg['col_branch']:
                         for _, row in match.iterrows():
                             branch_name = str(row[cfg['col_branch']]).strip()
@@ -267,12 +266,11 @@ else:
     
     selected_branch = None
     if len(branches_found) > 1:
-        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 지점을 선택해주세요.")
+        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 지점명을 선택해주세요.")
         selected_branch = st.selectbox("나의 지점명 선택", sorted(list(branches_found)))
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
-    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not user_name or not branch_code_input:
