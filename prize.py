@@ -27,22 +27,21 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 공통 커스텀 CSS (아이콘 충돌 방지 및 다크 테마 유지) ---
+# --- 공통 커스텀 CSS (아이콘 충돌 방지 및 토스 라이트 테마 적용) ---
 st.markdown("""
 <style>
-    /* 전체 배경을 완전한 다크톤으로 설정 */
-    [data-testid="stAppViewContainer"] { background-color: #0b0b0d; color: #f2f2f2; }
-    [data-testid="stSidebar"] { background-color: #131315; }
+    /* 전체 배경을 토스 스타일의 밝은 회색으로 고정 (아이콘 깨짐 방지를 위해 font-family는 제외) */
+    [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
+    [data-testid="stSidebar"] { background-color: #ffffff; }
     
-    /* 검색 컨테이너 */
-    .search-container {
-        background: #19191b; padding: 24px; border-radius: 20px;
-        margin-bottom: 24px; border: 1px solid #262628;
+    /* 우리가 만든 카드와 텍스트에만 커스텀 폰트 적용 (아이콘 시스템과 분리) */
+    .summary-card, .toss-card, .search-container, .toss-header {
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
-    /* 🌟 요약 카드 (토스 스타일 포인트 컬러 박스) 🌟 */
+    /* 🌟 요약 카드 (토스 블루 그라데이션) 🌟 */
     .summary-card { 
-        background: linear-gradient(135deg, #3182f6 0%, #1b64da 100%); /* 토스 블루 그라데이션 */
+        background: linear-gradient(135deg, #3182f6 0%, #1b64da 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
         box-shadow: 0 10px 25px rgba(49, 130, 246, 0.25);
     }
@@ -52,24 +51,28 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
-    /* 개별 시책 상세 카드 */
-    .toss-card { background: #19191b; border-radius: 20px; padding: 28px 24px; margin-bottom: 16px; border: 1px solid #262628; }
-    .toss-title { font-size: 1.6rem; font-weight: 700; color: #ffffff; margin-bottom: 6px; }
-    .toss-desc { font-size: 1.1rem; color: #8e8e93; margin-bottom: 24px; }
+    /* 개별 시책 상세 카드 (순백색 바탕에 연한 테두리와 그림자) */
+    .toss-card { 
+        background: #ffffff; border-radius: 20px; padding: 28px 24px; 
+        margin-bottom: 16px; border: 1px solid #e5e8eb; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
+    }
+    .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
+    .toss-desc { font-size: 1.1rem; color: #8b95a1; margin-bottom: 24px; }
     
     /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
-    .data-label { color: #8e8e93; font-size: 1.1rem; }
-    .data-value { color: #ffffff; font-size: 1.3rem; font-weight: 600; }
+    .data-label { color: #8b95a1; font-size: 1.1rem; }
+    .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
     
     /* 시상금 강조 행 */
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
-    .prize-label { color: #ffffff; font-size: 1.4rem; font-weight: 700; }
+    .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: #3182f6; font-size: 2rem; font-weight: 800; } 
     
     /* 기본 구분선 */
-    .toss-divider { height: 1px; background-color: #262628; margin: 16px 0; }
-    .sub-data { font-size: 1rem; color: #636366; margin-top: 4px; text-align: right; }
+    .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
+    .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -180,17 +183,28 @@ if mode == "관리자 (데이터 업로드 및 설정)":
             st.success("서버에 영구적으로 반영되었습니다! 이제 누구나 조회가 가능합니다.")
 
 # ==========================================
-# 🏆 사용자 모드 (Toss UI & 시니어 입력창 확대)
+# 🏆 사용자 모드 (Toss UI - 라이트 테마 & 시니어 최적화)
 # ==========================================
 else:
-    # 사용자 모드일 때만 입력창과 버튼을 큼직하게 만드는 CSS
+    # 사용자 모드일 때만 입력창을 순백색(Light)으로 강제하고 크기를 키움
     st.markdown("""
     <style>
+        .search-container {
+            background: #ffffff; padding: 24px; border-radius: 20px;
+            margin-bottom: 24px; border: 1px solid #e5e8eb;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        }
         input[type="text"], input[type="password"] {
             font-size: 1.4rem !important; 
             padding: 18px !important;
             height: 60px !important;
+            background-color: #f9fafb !important;
+            color: #191f28 !important;
+            border: 1px solid #e5e8eb !important;
+            border-radius: 12px !important;
         }
+        input::placeholder { color: #b0b8c1 !important; }
+        
         .stButton > button {
             font-size: 1.4rem !important;
             font-weight: 800 !important;
@@ -198,15 +212,16 @@ else:
             border-radius: 12px !important;
             background-color: #3182f6 !important;
             color: white !important;
+            border: none !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    # 상단 타이틀 추가 (메리츠화재 시상 현황)
+    # 상단 타이틀 (라이트 테마에 맞춘 글씨 색상)
     st.markdown("""
-    <div style='padding: 20px 0 10px 0;'>
+    <div class="toss-header" style='padding: 20px 0 10px 0;'>
         <p style='color:#3182f6; font-weight:800; font-size:1.1rem; margin-bottom: 0;'>메리츠화재 시상 현황</p>
-        <h2 style='color:#ffffff; font-weight:800; font-size:2.2rem; margin-top: 5px;'>내 실적 현황 조회</h2>
+        <h2 style='color:#191f28; font-weight:800; font-size:2.2rem; margin-top: 5px; letter-spacing: -1px;'>내 실적 현황 조회</h2>
     </div>
     """, unsafe_allow_html=True)
     
@@ -290,7 +305,7 @@ else:
                         pass 
 
             if len(calculated_results) > 0:
-                # 1) 요약표 렌더링 (블루 그라데이션 적용)
+                # 1) 요약표 렌더링
                 summary_html = f"""<div class="summary-card">
 <div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
 <div class="summary-total">{total_prize_sum:,.0f}원</div>
