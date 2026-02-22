@@ -27,33 +27,31 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
+# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마) ---
 st.markdown("""
 <style>
-    /* 전체 배경을 밝은 회색으로 고정 */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     
-    /* 🌟 글씨로 깨지는 Streamlit 기본 화살표/아이콘 완전 숨기기 🌟 */
-    span.material-symbols-rounded, 
-    span[data-testid="stIconMaterial"] {
-        display: none !important;
-    }
+    /* Streamlit 아이콘 깨짐 완전 숨기기 */
+    span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
     
-    /* 상단 메뉴 탭 스타일 */
     div[data-testid="stRadio"] > div {
         display: flex; justify-content: center; background-color: #ffffff; 
         padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
-    /* 🌟 메리츠 레드 타이틀 띠지 🌟 */
     .title-band {
         background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
         text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
         letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
-    /* 요약 카드 */
+    [data-testid="stForm"] {
+        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
+    }
+
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -65,7 +63,6 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
-    /* 개별 시책 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
@@ -73,29 +70,24 @@ st.markdown("""
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
     .toss-desc { font-size: 1.1rem; color: #8b95a1; margin-bottom: 24px; }
     
-    /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
     .data-label { color: #8b95a1; font-size: 1.1rem; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
     
-    /* 시상금 강조 행 */
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
     .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
     
-    /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 🌟 시니어 입력창 확대 및 메리츠 컬러 버튼 🌟 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important;
         border: 1px solid #e5e8eb !important; border-radius: 12px !important;
     }
     div[data-testid="stSelectbox"] > div {
-        background-color: #ffffff !important;
-        border: 1px solid #e5e8eb !important; border-radius: 12px !important;
+        background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important;
     }
     div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
@@ -119,32 +111,28 @@ if mode == "⚙️ 시스템 관리자 모드":
     st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:1.8rem; margin-top: 20px;'>관리자 설정</h2>", unsafe_allow_html=True)
     
     admin_pw = st.text_input("관리자 비밀번호를 입력하세요", type="password")
-    
     if admin_pw != "meritz0085":
-        if admin_pw:
-            st.error("비밀번호가 일치하지 않습니다.")
+        if admin_pw: st.error("비밀번호가 일치하지 않습니다.")
         st.stop()
         
     st.success("인증 성공! 변경 후 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
-    
     if uploaded_files:
         for file in uploaded_files:
             if file.name not in st.session_state['raw_data']:
                 if file.name.endswith('.csv'):
                     try: df = pd.read_csv(file)
-                    except Exception:
+                    except:
                         file.seek(0)
                         try: df = pd.read_csv(file, sep='\t')
-                        except Exception:
+                        except:
                             file.seek(0)
                             try: df = pd.read_csv(file, encoding='cp949')
-                            except Exception:
+                            except:
                                 file.seek(0)
                                 df = pd.read_csv(file, sep='\t', encoding='cp949')
-                else:
-                    df = pd.read_excel(file)
+                else: df = pd.read_excel(file)
                 st.session_state['raw_data'][file.name] = df
         st.success(f"업로드 완료! (현재 {len(st.session_state['raw_data'])}개 파일 보유)")
 
@@ -161,7 +149,6 @@ if mode == "⚙️ 시스템 관리자 모드":
             })
 
         for i, cfg in enumerate(st.session_state['config']):
-            # 기존 데이터 호환성 보장 및 새로운 컬럼(사번, 대리점명) 추가
             if 'desc' not in cfg: cfg['desc'] = ""
             if 'type' not in cfg: cfg['type'] = "구간 시책"
             if 'col_code' not in cfg: cfg['col_code'] = ""
@@ -201,10 +188,8 @@ if mode == "⚙️ 시스템 관리자 모드":
                     cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
 
             with col2:
-                if "구간" in cfg['type'] or "2기간" in cfg['type']:
-                    st.write("📈 구간 설정 (달성구간금액,지급률%)")
-                else:
-                    st.write("📈 전월 구간 설정 (전월구간금액,지급률%)")
+                if "구간" in cfg['type'] or "2기간" in cfg['type']: st.write("📈 구간 설정 (달성구간금액,지급률%)")
+                else: st.write("📈 전월 구간 설정 (전월구간금액,지급률%)")
                     
                 tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
                 tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
@@ -232,7 +217,6 @@ if mode == "⚙️ 시스템 관리자 모드":
 else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     
-    # 동명이인 검색을 위해 st.form 대신 실시간 반응형 입력창 사용
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>정보를 입력하세요</h3>", unsafe_allow_html=True)
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
@@ -246,18 +230,15 @@ else:
         for i, cfg in enumerate(st.session_state['config']):
             df = st.session_state['raw_data'].get(cfg['file'])
             if df is not None:
-                # 1. 이름 매칭
                 search_name = df[cfg['col_name']].fillna('').astype(str).str.strip()
                 name_match_condition = (search_name == user_name.strip())
                 
-                # 2. 지점코드 정규식 매칭 (숫자만 입력 시 정확히 해당 숫자 지점만 검색)
                 if branch_code_input.strip() == "0000": 
                     match = df[name_match_condition]
                 else:
                     clean_code = branch_code_input.replace("지점", "").strip()
                     if clean_code:
                         search_branch = df[cfg['col_branch']].fillna('').astype(str)
-                        # 부정형 전방탐색 (?<!\d) : 입력한 숫자 앞에 다른 숫자가 없어야 함 (1입력시 11지점 방지)
                         regex_pattern = rf"(?<!\d){clean_code}\s*지점"
                         match = df[name_match_condition & search_branch.str.contains(regex_pattern, regex=True)]
                     else:
@@ -265,21 +246,24 @@ else:
                 
                 if not match.empty:
                     matched_configs[i] = match
-                    if len(match) > 1:
-                        needs_disambiguation = True
-                    # 소속 대리점/지사명 수집
+                    # 🌟 지점명과 대리점명을 결합하여 직관적으로 보여주기 위한 로직 🌟
                     if 'col_agency' in cfg and cfg['col_agency']:
-                        agencies_found.update(match[cfg['col_agency']].fillna('').astype(str).str.strip().unique().tolist())
+                        for _, row in match.iterrows():
+                            branch_name = str(row[cfg['col_branch']]).strip()
+                            agency_name = str(row[cfg['col_agency']]).strip()
+                            if agency_name:
+                                # [GA3-3지점] 인카금융서비스 처럼 묶어서 저장
+                                combined_name = f"[{branch_name}] {agency_name}"
+                                agencies_found.add(combined_name)
 
-    # 빈 문자열 제거
     agencies_found = {a for a in agencies_found if a}
     
     selected_agency = None
-    if needs_disambiguation and len(agencies_found) > 1:
-        st.warning("⚠️ 동일한 이름과 지점을 가진 동명이인이 존재합니다. 본인의 소속(대리점/지사)을 선택해주세요.")
-        selected_agency = st.selectbox("소속 선택", sorted(list(agencies_found)))
+    if len(agencies_found) > 1:
+        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 소속을 선택해주세요.")
+        selected_agency = st.selectbox("나의 소속 선택", sorted(list(agencies_found)))
+        needs_disambiguation = True
 
-    # 확인 버튼
     submit = st.button("내 실적 확인하기")
 
     if submit:
@@ -296,9 +280,13 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                # 동명이인이 발생하여 사용자가 소속을 선택한 경우 데이터 필터링
-                if selected_agency and 'col_agency' in cfg and cfg['col_agency']:
-                    match_df = match_df[match_df[cfg['col_agency']].fillna('').astype(str).str.strip() == selected_agency]
+                # 사용자가 콤보박스에서 선택한 값으로 필터링 (동명이인 처리)
+                if needs_disambiguation and selected_agency and 'col_agency' in cfg and cfg['col_agency']:
+                    # 선택된 문자열 "[GA3-3지점] 인카금융서비스" 에서 대리점명과 지점명을 분리해서 매칭
+                    match_df = match_df[
+                        (match_df[cfg['col_branch']].fillna('').astype(str).str.strip() == selected_agency.split(']')[0][1:].strip()) &
+                        (match_df[cfg['col_agency']].fillna('').astype(str).str.strip() == selected_agency.split(']')[1].strip())
+                    ]
                 
                 if match_df.empty:
                     continue
@@ -325,7 +313,7 @@ else:
                     })
                     total_prize_sum += prize
                     
-                # 2) 브릿지 1기간 (시상금 확정용)
+                # 2) 브릿지 1기간
                 elif "1기간" in p_type: 
                     raw_prev = match_df[cfg['col_val_prev']].values[0]
                     raw_curr = match_df[cfg['col_val_curr']].values[0]
@@ -353,7 +341,7 @@ else:
                     })
                     total_prize_sum += prize
                     
-                # 3) 브릿지 2기간 (차월 구간 확보용)
+                # 3) 브릿지 2기간
                 elif "2기간" in p_type:
                     raw_curr = match_df[cfg['col_val_curr']].values[0]
                     try: val_curr = float(str(raw_curr).replace(',', ''))
@@ -372,7 +360,6 @@ else:
                     })
 
             if len(calculated_results) > 0:
-                # 1) 요약표 렌더링
                 summary_html = f"""<div class="summary-card">
 <div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
 <div class="summary-total">{total_prize_sum:,.0f}원</div>
@@ -384,7 +371,7 @@ else:
 <span class="summary-item-name">{res['name']}</span>
 <span class="summary-item-val">{res['prize']:,.0f}원</span>
 </div>"""
-                    else: # 브릿지 2기간
+                    else: 
                         summary_html += f"""<div class="data-row" style="padding: 6px 0;">
 <span class="summary-item-name">{res['name']}</span>
 <span class="summary-item-val" style="color:rgba(255,255,255,0.7);">{res['tier']:,.0f}원 구간 확보</span>
@@ -392,7 +379,6 @@ else:
                 summary_html += "</div>"
                 st.markdown(summary_html, unsafe_allow_html=True)
                 
-                # 2) 개별 상세 카드 렌더링
                 for res in calculated_results:
                     if res['type'] == "구간":
                         card_html = f"""<div class="toss-card">
