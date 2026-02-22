@@ -4,15 +4,15 @@ import numpy as np
 import os
 import json
 
-# 페이지 설정
-st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide", initial_sidebar_state="collapsed")
+# 페이지 설정 (사이드바 제거)
+st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide")
 
 # --- 데이터 영구 저장을 위한 폴더 설정 ---
 DATA_DIR = "app_data"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
-# 데이터 불러오기 로직 (앱이 새로고침 되어도 서버 폴더에서 읽어옴)
+# 데이터 불러오기 로직
 if 'raw_data' not in st.session_state:
     st.session_state['raw_data'] = {}
     for file in os.listdir(DATA_DIR):
@@ -27,16 +27,17 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 공통 커스텀 CSS (아이콘 충돌 방지 및 토스 라이트 테마 적용) ---
+# --- 🎨 커스텀 CSS (아이콘 깨짐 방지 및 토스 스타일 라이트 테마) ---
 st.markdown("""
 <style>
-    /* 전체 배경을 토스 스타일의 밝은 회색으로 고정 (아이콘 깨짐 방지를 위해 font-family는 제외) */
+    /* 전체 배경을 토스 스타일의 밝은 회색으로 고정 (폰트 강제 변경 코드를 삭제하여 아이콘 깨짐 완벽 해결) */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
-    [data-testid="stSidebar"] { background-color: #ffffff; }
     
-    /* 우리가 만든 카드와 텍스트에만 커스텀 폰트 적용 (아이콘 시스템과 분리) */
-    .summary-card, .toss-card, .search-container, .toss-header {
-        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    /* 상단 메뉴(라디오 버튼) 탭 스타일로 변경 */
+    div[data-testid="stRadio"] > div {
+        display: flex; justify-content: center; background-color: #ffffff; 
+        padding: 10px; border-radius: 15px; margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
     /* 🌟 요약 카드 (토스 블루 그라데이션) 🌟 */
@@ -51,7 +52,7 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
-    /* 개별 시책 상세 카드 (순백색 바탕에 연한 테두리와 그림자) */
+    /* 개별 시책 상세 카드 (순백색 바탕에 연한 테두리) */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; 
@@ -73,20 +74,37 @@ st.markdown("""
     /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
+    
+    /* 🌟 시니어 입력창 확대 🌟 */
+    div[data-testid="stTextInput"] input {
+        font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
+        background-color: #f9fafb !important; color: #191f28 !important;
+        border: 1px solid #e5e8eb !important; border-radius: 12px !important;
+    }
+    div[data-testid="stFormSubmitButton"] button {
+        font-size: 1.3rem !important; font-weight: 800 !important; height: 55px !important;
+        border-radius: 12px !important; background-color: #3182f6 !important;
+        color: white !important; border: none !important; width: 100%;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# ⚙️ 사이드바 & 접속 모드 관리
+# 📱 메인 화면 상단: 접속 모드 선택 탭 (사이드바 대체)
 # ==========================================
-st.sidebar.title("설정 메뉴")
-mode = st.sidebar.radio("접속 화면 선택", ["사용자 (실적 조회)", "관리자 (데이터 업로드 및 설정)"], index=0)
+st.markdown("""
+<div style='padding: 10px 0 5px 0;'>
+    <p style='color:#3182f6; font-weight:800; font-size:1.1rem; margin-bottom: 0;'>메리츠화재 시상 현황</p>
+</div>
+""", unsafe_allow_html=True)
+
+mode = st.radio("화면 선택", ["📊 내 실적 조회하기", "⚙️ 시스템 관리자 모드"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
 # 🔒 관리자 모드
 # ==========================================
-if mode == "관리자 (데이터 업로드 및 설정)":
-    st.title("⚙️ 시스템 관리자 설정")
+if mode == "⚙️ 시스템 관리자 모드":
+    st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:1.8rem; margin-top: 10px;'>관리자 설정</h2>", unsafe_allow_html=True)
     
     admin_pw = st.text_input("관리자 비밀번호를 입력하세요", type="password")
     
@@ -95,8 +113,7 @@ if mode == "관리자 (데이터 업로드 및 설정)":
             st.error("비밀번호가 일치하지 않습니다.")
         st.stop()
         
-    st.success("관리자 인증 성공!")
-    st.info("💡 이곳에서 변경하고 [설정 완료 및 서버에 반영하기]를 누르면 서버에 영구 반영되어 사용자 화면이 업데이트됩니다.")
+    st.success("인증 성공! 변경 후 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
     
@@ -117,11 +134,10 @@ if mode == "관리자 (데이터 업로드 및 설정)":
                 else:
                     df = pd.read_excel(file)
                 st.session_state['raw_data'][file.name] = df
-        st.success(f"업로드 완료! (현재 메모리에 {len(st.session_state['raw_data'])}개 유지 중)")
+        st.success(f"업로드 완료! (현재 {len(st.session_state['raw_data'])}개 파일 보유)")
 
     if st.session_state['raw_data']:
         st.divider()
-        st.subheader("2. 시책 항목 상세 설정")
         if st.button("➕ 시책 항목 추가"):
             first_file = list(st.session_state['raw_data'].keys())[0]
             st.session_state['config'].append({
@@ -180,57 +196,21 @@ if mode == "관리자 (데이터 업로드 및 설정)":
                 v.to_pickle(os.path.join(DATA_DIR, f"{k}.pkl"))
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
                 json.dump(st.session_state['config'], f, ensure_ascii=False)
-            st.success("서버에 영구적으로 반영되었습니다! 이제 누구나 조회가 가능합니다.")
+            st.success("서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
 # ==========================================
-# 🏆 사용자 모드 (Toss UI - 라이트 테마 & 시니어 최적화)
+# 🏆 사용자 모드 (Toss UI & 시니어 입력창 확대)
 # ==========================================
 else:
-    # 사용자 모드일 때만 입력창을 순백색(Light)으로 강제하고 크기를 키움
-    st.markdown("""
-    <style>
-        .search-container {
-            background: #ffffff; padding: 24px; border-radius: 20px;
-            margin-bottom: 24px; border: 1px solid #e5e8eb;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-        }
-        input[type="text"], input[type="password"] {
-            font-size: 1.4rem !important; 
-            padding: 18px !important;
-            height: 60px !important;
-            background-color: #f9fafb !important;
-            color: #191f28 !important;
-            border: 1px solid #e5e8eb !important;
-            border-radius: 12px !important;
-        }
-        input::placeholder { color: #b0b8c1 !important; }
-        
-        .stButton > button {
-            font-size: 1.4rem !important;
-            font-weight: 800 !important;
-            height: 60px !important;
-            border-radius: 12px !important;
-            background-color: #3182f6 !important;
-            color: white !important;
-            border: none !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 상단 타이틀 (라이트 테마에 맞춘 글씨 색상)
-    st.markdown("""
-    <div class="toss-header" style='padding: 20px 0 10px 0;'>
-        <p style='color:#3182f6; font-weight:800; font-size:1.1rem; margin-bottom: 0;'>메리츠화재 시상 현황</p>
-        <h2 style='color:#191f28; font-weight:800; font-size:2.2rem; margin-top: 5px; letter-spacing: -1px;'>내 실적 현황 조회</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:2.2rem; margin-top: 5px; margin-bottom: 20px; letter-spacing: -1px;'>내 실적 현황 조회</h2>", unsafe_allow_html=True)
     
     with st.container():
-        st.markdown("<div class='search-container'>", unsafe_allow_html=True)
+        # 검색 박스를 순백색으로 분리
+        st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
         with st.form("search_form"):
             user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
-            phone_last4 = st.text_input("비밀번호 (전화번호 뒷 4자리)", value="0000", max_chars=4, type="password")
-            submit = st.form_submit_button("내 실적 조회하기", use_container_width=True)
+            phone_last4 = st.text_input("비밀번호 (기본: 0000)", value="0000", max_chars=4, type="password")
+            submit = st.form_submit_button("내 실적 확인하기")
         st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
@@ -305,7 +285,7 @@ else:
                         pass 
 
             if len(calculated_results) > 0:
-                # 1) 요약표 렌더링
+                # 1) 요약표 렌더링 (블루 그라데이션 적용)
                 summary_html = f"""<div class="summary-card">
 <div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
 <div class="summary-total">{total_prize_sum:,.0f}원</div>
