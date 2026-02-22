@@ -27,13 +27,19 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
+# --- 🎨 커스텀 CSS (메리츠 컬러 & 깨진 아이콘 숨기기) ---
 st.markdown("""
 <style>
     /* 전체 배경을 밝은 회색으로 고정 */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     
-    /* 상단 메뉴(라디오 버튼) 탭 스타일로 변경 */
+    /* 🌟 글씨로 깨지는 Streamlit 기본 화살표/아이콘 완전 숨기기 🌟 */
+    span.material-symbols-rounded, 
+    span[data-testid="stIconMaterial"] {
+        display: none !important;
+    }
+    
+    /* 상단 메뉴 탭 스타일 */
     div[data-testid="stRadio"] > div {
         display: flex; justify-content: center; background-color: #ffffff; 
         padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px;
@@ -53,7 +59,7 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
     }
 
-    /* 🌟 요약 카드 (메리츠 레드 그라데이션) 🌟 */
+    /* 요약 카드 */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -158,12 +164,11 @@ if mode == "⚙️ 시스템 관리자 모드":
             # 기존 데이터 호환성 보장
             if 'desc' not in cfg: cfg['desc'] = ""
             if 'type' not in cfg: cfg['type'] = "구간 시책"
-            if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') # 기존 폰번호 컬럼을 지점 컬럼으로 이관
+            if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') 
             if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
             if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
             if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
 
-            # 🌟 화살표 아이콘 깨짐 방지를 위해 expander 대신 펼쳐진 일반 컨테이너 사용 🌟
             st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin-top:30px;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
             
             cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
@@ -179,14 +184,16 @@ if mode == "⚙️ 시스템 관리자 모드":
                 def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
                 cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
+                
+                # 💡 [중요] 사용자가 지점조직명을 선택할 수 있도록 안내
+                st.info("※ 지점별 코드로 검색하려면 반드시 아래를 '지점조직명'으로 선택하세요.")
                 cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
                 
                 if "구간" in cfg['type'] or "2기간" in cfg['type']:
-                    # 2기간은 당월 실적만 있으면 됨
                     col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
                     label = "당월 실적 수치 컬럼" if "2기간" in cfg['type'] else "실적 수치 컬럼"
                     cfg[col_key] = st.selectbox(label, cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
-                else: # 브릿지 1기간
+                else: 
                     cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
                     cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
                     cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
@@ -208,7 +215,7 @@ if mode == "⚙️ 시스템 관리자 모드":
                     cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
                 except:
                     st.error("형식이 올바르지 않습니다.")
-            st.divider() # 구분선
+            st.divider() 
                     
         if st.button("✅ 설정 완료 및 서버에 반영하기", type="primary"):
             for k, v in st.session_state['raw_data'].items():
@@ -246,18 +253,18 @@ else:
                         search_name = df[cfg['col_name']].fillna('').astype(str).str.strip()
                         name_match_condition = (search_name == user_name.strip())
                         
-                        # 지점코드 매칭 로직 (예: 사용자가 1을 입력하면 GA3-1지점은 찾고 GA3-11지점은 제외)
-                        if branch_code_input.strip() == "0000": # 마스터 키
+                        # 지점코드 매칭 (띄어쓰기가 있어도 찾을 수 있도록 정규식 보강)
+                        if branch_code_input.strip() == "0000": 
                             match = df[name_match_condition]
                         else:
                             clean_code = branch_code_input.replace("지점", "").strip()
                             if clean_code:
                                 search_branch = df[cfg['col_branch']].fillna('').astype(str)
-                                # 정규식 (?<!\d) : 앞에 숫자가 없는 상태에서 입력한 숫자+지점 인 것만 찾음
-                                regex_pattern = rf"(?<!\d){clean_code}지점"
+                                # 앞 글자가 숫자가 아니면서, 해당 숫자 뒤에 '지점'이 붙는 문자열 찾기 (스페이스바 허용)
+                                regex_pattern = rf"(?<!\d){clean_code}\s*지점"
                                 match = df[name_match_condition & search_branch.str.contains(regex_pattern, regex=True)]
                             else:
-                                match = pd.DataFrame() # 지점코드가 없으면 빈 결과
+                                match = pd.DataFrame() 
                         
                         if not match.empty:
                             p_type = cfg.get('type', '구간 시책')
@@ -310,7 +317,7 @@ else:
                                 })
                                 total_prize_sum += prize
                                 
-                            # 3) 브릿지 2기간 (차월 구간 확보용 - 당월 실적으로만 계산)
+                            # 3) 브릿지 2기간 (차월 구간 확보용)
                             elif "2기간" in p_type:
                                 raw_curr = match[cfg['col_val_curr']].values[0]
                                 try: val_curr = float(str(raw_curr).replace(',', ''))
@@ -327,12 +334,10 @@ else:
                                     "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
                                     "val": val_curr, "tier": tier_achieved, "rate": calc_rate
                                 })
-                                # 2기간은 확보 구간만 안내하므로 총 시상금 합산(prize)에서는 제외하거나 0처리합니다.
                     except Exception as e:
                         pass 
 
             if len(calculated_results) > 0:
-                # 1) 요약표 렌더링
                 summary_html = f"""<div class="summary-card">
 <div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
 <div class="summary-total">{total_prize_sum:,.0f}원</div>
@@ -344,7 +349,7 @@ else:
 <span class="summary-item-name">{res['name']}</span>
 <span class="summary-item-val">{res['prize']:,.0f}원</span>
 </div>"""
-                    else: # 브릿지 2기간 (금액이 아닌 확보 구간 표시)
+                    else:
                         summary_html += f"""<div class="data-row" style="padding: 6px 0;">
 <span class="summary-item-name">{res['name']}</span>
 <span class="summary-item-val" style="color:rgba(255,255,255,0.7);">{res['tier']:,.0f}원 구간 확보</span>
@@ -352,7 +357,6 @@ else:
                 summary_html += "</div>"
                 st.markdown(summary_html, unsafe_allow_html=True)
                 
-                # 2) 개별 상세 카드 렌더링
                 for res in calculated_results:
                     if res['type'] == "구간":
                         card_html = f"""<div class="toss-card">
