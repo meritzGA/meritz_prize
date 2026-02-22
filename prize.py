@@ -27,31 +27,33 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마) ---
+# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
 st.markdown("""
 <style>
+    /* 전체 배경을 밝은 회색으로 고정 */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     
-    /* Streamlit 아이콘 깨짐 완전 숨기기 */
-    span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
+    /* 🌟 글씨로 깨지는 Streamlit 기본 화살표/아이콘 완전 숨기기 🌟 */
+    span.material-symbols-rounded, 
+    span[data-testid="stIconMaterial"] {
+        display: none !important;
+    }
     
+    /* 상단 메뉴 탭 스타일 */
     div[data-testid="stRadio"] > div {
         display: flex; justify-content: center; background-color: #ffffff; 
         padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
+    /* 🌟 메리츠 레드 타이틀 띠지 🌟 */
     .title-band {
         background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
         text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
         letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
-    [data-testid="stForm"] {
-        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
-    }
-
+    /* 요약 카드 */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -63,6 +65,7 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
+    /* 개별 시책 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
@@ -70,17 +73,21 @@ st.markdown("""
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
     .toss-desc { font-size: 1.1rem; color: #8b95a1; margin-bottom: 24px; }
     
+    /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
     .data-label { color: #8b95a1; font-size: 1.1rem; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
     
+    /* 시상금 강조 행 */
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
     .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
     
+    /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
+    /* 🌟 시니어 입력창 확대 및 메리츠 컬러 버튼 🌟 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important;
@@ -149,6 +156,7 @@ if mode == "⚙️ 시스템 관리자 모드":
             })
 
         for i, cfg in enumerate(st.session_state['config']):
+            # 기존 데이터 호환성 보장
             if 'desc' not in cfg: cfg['desc'] = ""
             if 'type' not in cfg: cfg['type'] = "구간 시책"
             if 'col_code' not in cfg: cfg['col_code'] = ""
@@ -172,11 +180,9 @@ if mode == "⚙️ 시스템 관리자 모드":
                 cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
                 def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
-                st.info("💡 동명이인 식별을 위해 아래 4개 컬럼을 정확히 지정해주세요.")
+                st.info("💡 동명이인 식별을 위해 아래 컬럼을 정확히 지정해주세요.")
                 cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
-                cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
                 cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
-                cfg['col_agency'] = st.selectbox("대리점/지사(소속) 컬럼", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
                 
                 if "구간" in cfg['type'] or "2기간" in cfg['type']:
                     col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
@@ -218,12 +224,16 @@ else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>정보를 입력하세요</h3>", unsafe_allow_html=True)
+    
+    # st.form 대신 바로 입력받도록 변경 (실시간 반응형 박스 처리 위함)
+    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
+    
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
 
     # --- 동명이인 및 데이터 매칭 로직 ---
     matched_configs = {}
-    agencies_found = set()
+    branches_found = set()
     needs_disambiguation = False
 
     if user_name and branch_code_input:
@@ -246,25 +256,23 @@ else:
                 
                 if not match.empty:
                     matched_configs[i] = match
-                    # 🌟 지점명과 대리점명을 결합하여 직관적으로 보여주기 위한 로직 🌟
-                    if 'col_agency' in cfg and cfg['col_agency']:
+                    # 🌟 지점명만 추출하여 셋(Set)에 담기 🌟
+                    if 'col_branch' in cfg and cfg['col_branch']:
                         for _, row in match.iterrows():
                             branch_name = str(row[cfg['col_branch']]).strip()
-                            agency_name = str(row[cfg['col_agency']]).strip()
-                            if agency_name:
-                                # [GA3-3지점] 인카금융서비스 처럼 묶어서 저장
-                                combined_name = f"[{branch_name}] {agency_name}"
-                                agencies_found.add(combined_name)
+                            if branch_name:
+                                branches_found.add(branch_name)
 
-    agencies_found = {a for a in agencies_found if a}
+    branches_found = {b for b in branches_found if b}
     
-    selected_agency = None
-    if len(agencies_found) > 1:
-        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 소속을 선택해주세요.")
-        selected_agency = st.selectbox("나의 소속 선택", sorted(list(agencies_found)))
+    selected_branch = None
+    if len(branches_found) > 1:
+        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 지점을 선택해주세요.")
+        selected_branch = st.selectbox("나의 지점명 선택", sorted(list(branches_found)))
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not user_name or not branch_code_input:
@@ -280,13 +288,9 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                # 사용자가 콤보박스에서 선택한 값으로 필터링 (동명이인 처리)
-                if needs_disambiguation and selected_agency and 'col_agency' in cfg and cfg['col_agency']:
-                    # 선택된 문자열 "[GA3-3지점] 인카금융서비스" 에서 대리점명과 지점명을 분리해서 매칭
-                    match_df = match_df[
-                        (match_df[cfg['col_branch']].fillna('').astype(str).str.strip() == selected_agency.split(']')[0][1:].strip()) &
-                        (match_df[cfg['col_agency']].fillna('').astype(str).str.strip() == selected_agency.split(']')[1].strip())
-                    ]
+                # 사용자가 콤보박스에서 지점명을 선택한 경우 필터링 (동명이인 처리)
+                if needs_disambiguation and selected_branch and 'col_branch' in cfg and cfg['col_branch']:
+                    match_df = match_df[match_df[cfg['col_branch']].fillna('').astype(str).str.strip() == selected_branch]
                 
                 if match_df.empty:
                     continue
