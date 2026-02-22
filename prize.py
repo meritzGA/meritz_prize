@@ -36,35 +36,32 @@ st.markdown("""
     /* 상단 메뉴(라디오 버튼) 탭 스타일로 변경 */
     div[data-testid="stRadio"] > div {
         display: flex; justify-content: center; background-color: #ffffff; 
-        padding: 10px; border-radius: 15px; margin-bottom: 10px; margin-top: 10px;
+        padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
-    /* 메인 타이틀 배너 (파란색 띠지) */
-    .main-banner {
-        background: linear-gradient(135deg, #3182f6 0%, #1b64da 100%);
-        padding: 24px 20px;
-        border-radius: 20px;
-        text-align: center;
-        margin-bottom: 15px;
-        box-shadow: 0 10px 25px rgba(49, 130, 246, 0.2);
-    }
-    .main-banner-text {
+    /* 🌟 심플한 파란색 타이틀 띠지 (버튼과 동일한 디자인) 🌟 */
+    .title-band {
+        background-color: #3182f6;
         color: #ffffff;
-        font-size: 2.2rem;
+        font-size: 1.4rem;
         font-weight: 800;
-        margin: 0;
-        letter-spacing: -1px;
-    }
-    
-    /* 서브 타이틀 */
-    .sub-title-text {
-        color: #333d4b;
-        font-size: 1.3rem;
-        font-weight: 700;
         text-align: center;
-        margin-bottom: 25px;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 24px;
         letter-spacing: -0.5px;
+        box-shadow: 0 4px 10px rgba(49, 130, 246, 0.2);
+    }
+
+    /* 스트림릿 입력 폼(Form) 자체를 하얀색 카드로 만듦 (의미없는 빈 박스 제거) */
+    [data-testid="stForm"] {
+        background-color: #ffffff;
+        padding: 24px;
+        border-radius: 20px;
+        border: 1px solid #e5e8eb;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        margin-bottom: 24px;
     }
 
     /* 요약 카드 */
@@ -220,25 +217,17 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.success("서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
 # ==========================================
-# 🏆 3. 사용자 모드 (메인 배너 + 토스 UI)
+# 🏆 3. 사용자 모드 (심플 띠지 배너 + 토스 UI)
 # ==========================================
 else:
-    # 파란색 메인 배너 (띠지)와 서브 타이틀 렌더링
-    st.markdown("""
-    <div class="main-banner">
-        <h1 class="main-banner-text">메리츠화재 시상 현황</h1>
-    </div>
-    <div class="sub-title-text">내 실적 현황 조회</div>
-    """, unsafe_allow_html=True)
+    # 파란색 띠지 (버튼 디자인과 동일)
+    st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     
-    with st.container():
-        # 검색 박스
-        st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
-        with st.form("search_form"):
-            user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
-            phone_last4 = st.text_input("비밀번호 (기본: 0000)", value="0000", max_chars=4, type="password")
-            submit = st.form_submit_button("내 실적 확인하기")
-        st.markdown("</div>", unsafe_allow_html=True)
+    # 의미없는 빈 박스를 없애고, 폼(form) 자체를 하얀색 카드로 스타일링
+    with st.form("search_form"):
+        user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
+        phone_last4 = st.text_input("비밀번호 (기본: 0000)", value="0000", max_chars=4, type="password")
+        submit = st.form_submit_button("내 실적 확인하기")
 
     if submit:
         if not user_name:
