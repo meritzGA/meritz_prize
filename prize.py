@@ -27,20 +27,47 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (아이콘 깨짐 방지 및 토스 스타일 라이트 테마) ---
+# --- 🎨 커스텀 CSS (토스 스타일 라이트 테마) ---
 st.markdown("""
 <style>
-    /* 전체 배경을 토스 스타일의 밝은 회색으로 고정 (폰트 강제 변경 코드를 삭제하여 아이콘 깨짐 완벽 해결) */
+    /* 전체 배경을 토스 스타일의 밝은 회색으로 고정 */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     
     /* 상단 메뉴(라디오 버튼) 탭 스타일로 변경 */
     div[data-testid="stRadio"] > div {
         display: flex; justify-content: center; background-color: #ffffff; 
-        padding: 10px; border-radius: 15px; margin-bottom: 20px;
+        padding: 10px; border-radius: 15px; margin-bottom: 10px; margin-top: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
-    /* 🌟 요약 카드 (토스 블루 그라데이션) 🌟 */
+    /* 메인 타이틀 배너 (파란색 띠지) */
+    .main-banner {
+        background: linear-gradient(135deg, #3182f6 0%, #1b64da 100%);
+        padding: 24px 20px;
+        border-radius: 20px;
+        text-align: center;
+        margin-bottom: 15px;
+        box-shadow: 0 10px 25px rgba(49, 130, 246, 0.2);
+    }
+    .main-banner-text {
+        color: #ffffff;
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -1px;
+    }
+    
+    /* 서브 타이틀 */
+    .sub-title-text {
+        color: #333d4b;
+        font-size: 1.3rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 25px;
+        letter-spacing: -0.5px;
+    }
+
+    /* 요약 카드 */
     .summary-card { 
         background: linear-gradient(135deg, #3182f6 0%, #1b64da 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -52,7 +79,7 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
-    /* 개별 시책 상세 카드 (순백색 바탕에 연한 테두리) */
+    /* 개별 시책 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; 
@@ -90,21 +117,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 📱 메인 화면 상단: 접속 모드 선택 탭 (사이드바 대체)
+# 📱 1. 최상단: 메뉴 선택 탭
 # ==========================================
-st.markdown("""
-<div style='padding: 10px 0 5px 0;'>
-    <p style='color:#3182f6; font-weight:800; font-size:1.1rem; margin-bottom: 0;'>메리츠화재 시상 현황</p>
-</div>
-""", unsafe_allow_html=True)
-
 mode = st.radio("화면 선택", ["📊 내 실적 조회하기", "⚙️ 시스템 관리자 모드"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 🔒 관리자 모드
+# 🔒 2. 관리자 모드
 # ==========================================
 if mode == "⚙️ 시스템 관리자 모드":
-    st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:1.8rem; margin-top: 10px;'>관리자 설정</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:1.8rem; margin-top: 20px;'>관리자 설정</h2>", unsafe_allow_html=True)
     
     admin_pw = st.text_input("관리자 비밀번호를 입력하세요", type="password")
     
@@ -199,13 +220,19 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.success("서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
 # ==========================================
-# 🏆 사용자 모드 (Toss UI & 시니어 입력창 확대)
+# 🏆 3. 사용자 모드 (메인 배너 + 토스 UI)
 # ==========================================
 else:
-    st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:2.2rem; margin-top: 5px; margin-bottom: 20px; letter-spacing: -1px;'>내 실적 현황 조회</h2>", unsafe_allow_html=True)
+    # 파란색 메인 배너 (띠지)와 서브 타이틀 렌더링
+    st.markdown("""
+    <div class="main-banner">
+        <h1 class="main-banner-text">메리츠화재 시상 현황</h1>
+    </div>
+    <div class="sub-title-text">내 실적 현황 조회</div>
+    """, unsafe_allow_html=True)
     
     with st.container():
-        # 검색 박스를 순백색으로 분리
+        # 검색 박스
         st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
         with st.form("search_form"):
             user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
@@ -285,7 +312,7 @@ else:
                         pass 
 
             if len(calculated_results) > 0:
-                # 1) 요약표 렌더링 (블루 그라데이션 적용)
+                # 1) 요약표 렌더링
                 summary_html = f"""<div class="summary-card">
 <div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
 <div class="summary-total">{total_prize_sum:,.0f}원</div>
