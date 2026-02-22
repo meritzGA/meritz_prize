@@ -27,7 +27,7 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 적용) ---
+# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
 st.markdown("""
 <style>
     /* 전체 배경을 밝은 회색으로 고정 */
@@ -42,26 +42,15 @@ st.markdown("""
     
     /* 🌟 메리츠 레드 타이틀 띠지 🌟 */
     .title-band {
-        background-color: rgb(128, 0, 0);
-        color: #ffffff;
-        font-size: 1.4rem;
-        font-weight: 800;
-        text-align: center;
-        padding: 16px;
-        border-radius: 12px;
-        margin-bottom: 24px;
-        letter-spacing: -0.5px;
-        box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
+        background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
+        text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
+        letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
-    /* 스트림릿 입력 폼(Form) 자체를 하얀색 카드로 만듦 */
+    /* 스트림릿 입력 폼(Form) 카드로 만듦 */
     [data-testid="stForm"] {
-        background-color: #ffffff;
-        padding: 24px;
-        border-radius: 20px;
-        border: 1px solid #e5e8eb;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-        margin-bottom: 24px;
+        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
     }
 
     /* 🌟 요약 카드 (메리츠 레드 그라데이션) 🌟 */
@@ -79,8 +68,7 @@ st.markdown("""
     /* 개별 시책 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
-        margin-bottom: 16px; border: 1px solid #e5e8eb; 
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
+        margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
     }
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
     .toss-desc { font-size: 1.1rem; color: #8b95a1; margin-bottom: 24px; }
@@ -107,7 +95,7 @@ st.markdown("""
     }
     div[data-testid="stFormSubmitButton"] button {
         font-size: 1.3rem !important; font-weight: 800 !important; height: 55px !important;
-        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important; /* 버튼 색상 변경 */
+        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
         color: white !important; border: none !important; width: 100%;
     }
 </style>
@@ -161,54 +149,67 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.session_state['config'].append({
                 "name": f"신규 시책 {len(st.session_state['config'])+1}",
                 "desc": "", "type": "구간 시책", 
-                "file": first_file, "col_name": "", "col_phone": "", 
+                "file": first_file, "col_name": "", "col_branch": "", 
                 "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
                 "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
             })
 
         for i, cfg in enumerate(st.session_state['config']):
+            # 기존 데이터 호환성 보장
             if 'desc' not in cfg: cfg['desc'] = ""
             if 'type' not in cfg: cfg['type'] = "구간 시책"
+            if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') # 기존 폰번호 컬럼을 지점 컬럼으로 이관
             if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
             if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
             if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
 
-            with st.expander(f"📌 {cfg['name']} 설정", expanded=True):
-                cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
-                cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
-                cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책"], index=0 if cfg['type']=="구간 시책" else 1, horizontal=True, key=f"type_{i}")
+            # 🌟 화살표 아이콘 깨짐 방지를 위해 expander 대신 펼쳐진 일반 컨테이너 사용 🌟
+            st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin-top:30px;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
+            
+            cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
+            cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
+            cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 구간 확보)"], 
+                                   index=0 if "구간" in cfg['type'] else (1 if "1기간" in cfg['type'] else 2), horizontal=True, key=f"type_{i}")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                file_opts = list(st.session_state['raw_data'].keys())
+                cfg['file'] = st.selectbox(f"대상 파일", file_opts, index=file_opts.index(cfg['file']) if cfg['file'] in file_opts else 0, key=f"file_{i}")
+                cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
+                def get_idx(val, opts): return opts.index(val) if val in opts else 0
+
+                cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
+                cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
                 
-                col1, col2 = st.columns(2)
-                with col1:
-                    file_opts = list(st.session_state['raw_data'].keys())
-                    cfg['file'] = st.selectbox(f"대상 파일", file_opts, index=file_opts.index(cfg['file']) if cfg['file'] in file_opts else 0, key=f"file_{i}")
-                    cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
-                    def get_idx(val, opts): return opts.index(val) if val in opts else 0
+                if "구간" in cfg['type'] or "2기간" in cfg['type']:
+                    # 2기간은 당월 실적만 있으면 됨
+                    col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
+                    label = "당월 실적 수치 컬럼" if "2기간" in cfg['type'] else "실적 수치 컬럼"
+                    cfg[col_key] = st.selectbox(label, cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
+                else: # 브릿지 1기간
+                    cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
+                    cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
+                    cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
 
-                    cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
-                    cfg['col_phone'] = st.selectbox("식별번호(비밀번호) 컬럼", cols, index=get_idx(cfg['col_phone'], cols), key=f"cphone_{i}")
+            with col2:
+                if "구간" in cfg['type'] or "2기간" in cfg['type']:
+                    st.write("📈 구간 설정 (달성구간금액,지급률%)")
+                else:
+                    st.write("📈 전월 구간 설정 (전월구간금액,지급률%)")
                     
-                    if cfg['type'] == "구간 시책":
-                        cfg['col_val'] = st.selectbox("실적 수치 컬럼", cols, index=get_idx(cfg['col_val'], cols), key=f"cval_{i}")
-                    else:
-                        cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
-                        cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
-                        cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
-
-                with col2:
-                    st.write("📈 구간 설정 (구간금액,지급률%)")
-                    tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
-                    tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
-                    try:
-                        new_tiers = []
-                        for line in tier_input.strip().split('\n'):
-                            if ',' in line:
-                                parts = line.split(',')
-                                new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
-                        cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
-                    except:
-                        st.error("형식이 올바르지 않습니다.")
-                        
+                tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
+                tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
+                try:
+                    new_tiers = []
+                    for line in tier_input.strip().split('\n'):
+                        if ',' in line:
+                            parts = line.split(',')
+                            new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
+                    cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
+                except:
+                    st.error("형식이 올바르지 않습니다.")
+            st.divider() # 구분선
+                    
         if st.button("✅ 설정 완료 및 서버에 반영하기", type="primary"):
             for k, v in st.session_state['raw_data'].items():
                 v.to_pickle(os.path.join(DATA_DIR, f"{k}.pkl"))
@@ -225,7 +226,7 @@ else:
     
     with st.form("search_form"):
         user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
-        phone_last4 = st.text_input("비밀번호 (기본: 0000)", value="0000", max_chars=4, type="password")
+        branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
         submit = st.form_submit_button("내 실적 확인하기")
 
     if submit:
@@ -241,17 +242,28 @@ else:
                 if cfg['file'] in st.session_state['raw_data']:
                     df = st.session_state['raw_data'][cfg['file']]
                     try:
-                        search_phone = df[cfg['col_phone']].fillna('').astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                        # 이름 매칭
                         search_name = df[cfg['col_name']].fillna('').astype(str).str.strip()
-                        
                         name_match_condition = (search_name == user_name.strip())
-                        if phone_last4 == "0000": match = df[name_match_condition]
-                        else: match = df[name_match_condition & (search_phone.str.endswith(phone_last4))]
+                        
+                        # 지점코드 매칭 로직 (예: 사용자가 1을 입력하면 GA3-1지점은 찾고 GA3-11지점은 제외)
+                        if branch_code_input.strip() == "0000": # 마스터 키
+                            match = df[name_match_condition]
+                        else:
+                            clean_code = branch_code_input.replace("지점", "").strip()
+                            if clean_code:
+                                search_branch = df[cfg['col_branch']].fillna('').astype(str)
+                                # 정규식 (?<!\d) : 앞에 숫자가 없는 상태에서 입력한 숫자+지점 인 것만 찾음
+                                regex_pattern = rf"(?<!\d){clean_code}지점"
+                                match = df[name_match_condition & search_branch.str.contains(regex_pattern, regex=True)]
+                            else:
+                                match = pd.DataFrame() # 지점코드가 없으면 빈 결과
                         
                         if not match.empty:
                             p_type = cfg.get('type', '구간 시책')
                             
-                            if p_type == "구간 시책":
+                            # 1) 일반 구간 시책
+                            if "구간" in p_type:
                                 raw_val = match[cfg['col_val']].values[0]
                                 try: val = float(str(raw_val).replace(',', ''))
                                 except: val = 0.0
@@ -270,7 +282,8 @@ else:
                                 })
                                 total_prize_sum += prize
                                 
-                            else: 
+                            # 2) 브릿지 1기간 (시상금 확정용)
+                            elif "1기간" in p_type: 
                                 raw_prev = match[cfg['col_val_prev']].values[0]
                                 raw_curr = match[cfg['col_val_curr']].values[0]
                                 try: val_prev = float(str(raw_prev).replace(',', ''))
@@ -290,12 +303,31 @@ else:
                                             break
                                             
                                 calculated_results.append({
-                                    "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지",
+                                    "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지1",
                                     "val_prev": val_prev, "tier_prev": tier_prev,
                                     "val_curr": val_curr, "curr_req": curr_req,
                                     "rate": calc_rate, "prize": prize
                                 })
                                 total_prize_sum += prize
+                                
+                            # 3) 브릿지 2기간 (차월 구간 확보용 - 당월 실적으로만 계산)
+                            elif "2기간" in p_type:
+                                raw_curr = match[cfg['col_val_curr']].values[0]
+                                try: val_curr = float(str(raw_curr).replace(',', ''))
+                                except: val_curr = 0.0
+                                
+                                calc_rate, tier_achieved = 0, 0
+                                for amt, rate in cfg['tiers']:
+                                    if val_curr >= amt:
+                                        tier_achieved = amt
+                                        calc_rate = rate
+                                        break
+                                
+                                calculated_results.append({
+                                    "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
+                                    "val": val_curr, "tier": tier_achieved, "rate": calc_rate
+                                })
+                                # 2기간은 확보 구간만 안내하므로 총 시상금 합산(prize)에서는 제외하거나 0처리합니다.
                     except Exception as e:
                         pass 
 
@@ -307,9 +339,15 @@ else:
 <div class="summary-divider"></div>"""
                 
                 for res in calculated_results:
-                    summary_html += f"""<div class="data-row" style="padding: 6px 0;">
+                    if res['type'] in ["구간", "브릿지1"]:
+                        summary_html += f"""<div class="data-row" style="padding: 6px 0;">
 <span class="summary-item-name">{res['name']}</span>
 <span class="summary-item-val">{res['prize']:,.0f}원</span>
+</div>"""
+                    else: # 브릿지 2기간 (금액이 아닌 확보 구간 표시)
+                        summary_html += f"""<div class="data-row" style="padding: 6px 0;">
+<span class="summary-item-name">{res['name']}</span>
+<span class="summary-item-val" style="color:rgba(255,255,255,0.7);">{res['tier']:,.0f}원 구간 확보</span>
 </div>"""
                 summary_html += "</div>"
                 st.markdown(summary_html, unsafe_allow_html=True)
@@ -329,7 +367,7 @@ else:
 <span class="prize-value">{res['prize']:,.0f}원</span>
 </div>
 </div>"""
-                    else:
+                    elif res['type'] == "브릿지1":
                         card_html = f"""<div class="toss-card">
 <div class="toss-title">{res['name']}</div>
 <div class="toss-desc">{res['desc']}</div>
@@ -351,6 +389,18 @@ else:
 <span class="prize-value">{res['prize']:,.0f}원</span>
 </div>
 </div>"""
+                    elif res['type'] == "브릿지2":
+                        card_html = f"""<div class="toss-card">
+<div class="toss-title">{res['name']}</div>
+<div class="toss-desc">{res['desc']}</div>
+<div class="data-row"><span class="data-label">당월 누적 실적</span><span class="data-value">{res['val']:,.0f}원</span></div>
+<div class="data-row"><span class="data-label">예상 지급률</span><span class="data-value">{res['rate']:g}%</span></div>
+<div class="toss-divider"></div>
+<div class="prize-row">
+<span class="prize-label">차월 확보한 브릿지 구간</span>
+<span class="prize-value">{res['tier']:,.0f}원</span>
+</div>
+</div>"""
                     st.markdown(card_html, unsafe_allow_html=True)
             else:
-                st.error("일치하는 정보가 없습니다. 이름을 다시 확인해주세요.")
+                st.error("일치하는 정보가 없습니다. 이름과 지점코드를 다시 확인해주세요.")
