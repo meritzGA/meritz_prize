@@ -5,14 +5,14 @@ import os
 import json
 
 # 페이지 설정
-st.set_page_config(page_title="My 실적 현황", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 데이타 영구 저장을 위한 폴더 설정 ---
+# --- 데이터 영구 저장을 위한 폴더 설정 ---
 DATA_DIR = "app_data"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
-# 데이타 불러오기 로직 (앱이 새로고침 되어도 서버 폴더에서 읽어옴)
+# 데이터 불러오기 로직 (앱이 새로고침 되어도 서버 폴더에서 읽어옴)
 if 'raw_data' not in st.session_state:
     st.session_state['raw_data'] = {}
     for file in os.listdir(DATA_DIR):
@@ -27,27 +27,12 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 커스텀 CSS (시니어 맞춤형 큼직한 UI & 토스 스타일) ---
+# --- 공통 커스텀 CSS (아이콘 충돌 방지 및 다크 테마 유지) ---
 st.markdown("""
 <style>
     /* 전체 배경을 완전한 다크톤으로 설정 */
-    [data-testid="stAppViewContainer"] { background-color: #0b0b0d; color: #f2f2f2; font-family: 'Pretendard', -apple-system, sans-serif; }
+    [data-testid="stAppViewContainer"] { background-color: #0b0b0d; color: #f2f2f2; }
     [data-testid="stSidebar"] { background-color: #131315; }
-    
-    /* 🌟 시니어 맞춤: 입력창 및 버튼 크기 대폭 확대 🌟 */
-    input[type="text"], input[type="password"] {
-        font-size: 1.4rem !important; 
-        padding: 18px !important;
-        height: 60px !important;
-    }
-    .stButton > button {
-        font-size: 1.4rem !important;
-        font-weight: 800 !important;
-        height: 60px !important;
-        border-radius: 12px !important;
-        background-color: #3182f6 !important;
-        color: white !important;
-    }
     
     /* 검색 컨테이너 */
     .search-container {
@@ -55,19 +40,24 @@ st.markdown("""
         margin-bottom: 24px; border: 1px solid #262628;
     }
     
-    /* 요약 카드 (상단 총합) - 글자 크기 상향 */
-    .summary-card { background: #19191b; border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: 1px solid #262628; }
-    .summary-label { color: #8e8e93; font-size: 1.2rem; font-weight: 600; margin-bottom: 8px; }
+    /* 🌟 요약 카드 (토스 스타일 포인트 컬러 박스) 🌟 */
+    .summary-card { 
+        background: linear-gradient(135deg, #3182f6 0%, #1b64da 100%); /* 토스 블루 그라데이션 */
+        border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
+        box-shadow: 0 10px 25px rgba(49, 130, 246, 0.25);
+    }
+    .summary-label { color: rgba(255,255,255,0.85); font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
     .summary-total { color: #ffffff; font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; }
-    .summary-item-name { color: #aeaeb2; font-size: 1.2rem; }
-    .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 700; }
+    .summary-item-name { color: rgba(255,255,255,0.95); font-size: 1.15rem; }
+    .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
+    .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
-    /* 개별 시책 상세 카드 - 글자 크기 상향 */
+    /* 개별 시책 상세 카드 */
     .toss-card { background: #19191b; border-radius: 20px; padding: 28px 24px; margin-bottom: 16px; border: 1px solid #262628; }
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #ffffff; margin-bottom: 6px; }
     .toss-desc { font-size: 1.1rem; color: #8e8e93; margin-bottom: 24px; }
     
-    /* 데이터 행 (좌우 정렬) */
+    /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
     .data-label { color: #8e8e93; font-size: 1.1rem; }
     .data-value { color: #ffffff; font-size: 1.3rem; font-weight: 600; }
@@ -77,10 +67,8 @@ st.markdown("""
     .prize-label { color: #ffffff; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: #3182f6; font-size: 2rem; font-weight: 800; } 
     
-    /* 구분선 */
+    /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #262628; margin: 16px 0; }
-    
-    /* 브릿지 시책 전용 작은 글씨 */
     .sub-data { font-size: 1rem; color: #636366; margin-top: 4px; text-align: right; }
 </style>
 """, unsafe_allow_html=True)
@@ -89,25 +77,23 @@ st.markdown("""
 # ⚙️ 사이드바 & 접속 모드 관리
 # ==========================================
 st.sidebar.title("설정 메뉴")
-# 기본값을 사용자로 설정
 mode = st.sidebar.radio("접속 화면 선택", ["사용자 (실적 조회)", "관리자 (데이터 업로드 및 설정)"], index=0)
 
 # ==========================================
-# 🔒 관리자 모드 (비밀번호 보호)
+# 🔒 관리자 모드
 # ==========================================
 if mode == "관리자 (데이터 업로드 및 설정)":
     st.title("⚙️ 시스템 관리자 설정")
     
-    # 관리자 암호 확인
     admin_pw = st.text_input("관리자 비밀번호를 입력하세요", type="password")
     
     if admin_pw != "meritz0085":
         if admin_pw:
             st.error("비밀번호가 일치하지 않습니다.")
-        st.stop() # 비밀번호가 틀리면 아래 코드는 실행하지 않고 멈춤
+        st.stop()
         
     st.success("관리자 인증 성공!")
-    st.info("💡 이곳에서 변경하고 [설정 완료 및 저장]을 누르면 서버에 영구 반영되어 사용자 화면이 업데이트됩니다.")
+    st.info("💡 이곳에서 변경하고 [설정 완료 및 서버에 반영하기]를 누르면 서버에 영구 반영되어 사용자 화면이 업데이트됩니다.")
     
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
     
@@ -144,7 +130,6 @@ if mode == "관리자 (데이터 업로드 및 설정)":
             })
 
         for i, cfg in enumerate(st.session_state['config']):
-            # 키 누락 방지 처리
             if 'desc' not in cfg: cfg['desc'] = ""
             if 'type' not in cfg: cfg['type'] = "구간 시책"
             if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
@@ -187,22 +172,43 @@ if mode == "관리자 (데이터 업로드 및 설정)":
                     except:
                         st.error("형식이 올바르지 않습니다.")
                         
-        # 영구 저장 버튼
         if st.button("✅ 설정 완료 및 서버에 반영하기", type="primary"):
-            # 1. 데이타프레임 저장
             for k, v in st.session_state['raw_data'].items():
                 v.to_pickle(os.path.join(DATA_DIR, f"{k}.pkl"))
-            # 2. 시책 설정 JSON 저장
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
                 json.dump(st.session_state['config'], f, ensure_ascii=False)
-                
             st.success("서버에 영구적으로 반영되었습니다! 이제 누구나 조회가 가능합니다.")
 
 # ==========================================
-# 🏆 사용자 모드 (Toss UI & 시니어 최적화)
+# 🏆 사용자 모드 (Toss UI & 시니어 입력창 확대)
 # ==========================================
 else:
-    st.markdown("<div style='padding: 20px 0 10px 0;'><h2 style='color:#ffffff; font-weight:800; font-size:2rem;'>내 실적 현황 조회</h2></div>", unsafe_allow_html=True)
+    # 사용자 모드일 때만 입력창과 버튼을 큼직하게 만드는 CSS
+    st.markdown("""
+    <style>
+        input[type="text"], input[type="password"] {
+            font-size: 1.4rem !important; 
+            padding: 18px !important;
+            height: 60px !important;
+        }
+        .stButton > button {
+            font-size: 1.4rem !important;
+            font-weight: 800 !important;
+            height: 60px !important;
+            border-radius: 12px !important;
+            background-color: #3182f6 !important;
+            color: white !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # 상단 타이틀 추가 (메리츠화재 시상 현황)
+    st.markdown("""
+    <div style='padding: 20px 0 10px 0;'>
+        <p style='color:#3182f6; font-weight:800; font-size:1.1rem; margin-bottom: 0;'>메리츠화재 시상 현황</p>
+        <h2 style='color:#ffffff; font-weight:800; font-size:2.2rem; margin-top: 5px;'>내 실적 현황 조회</h2>
+    </div>
+    """, unsafe_allow_html=True)
     
     with st.container():
         st.markdown("<div class='search-container'>", unsafe_allow_html=True)
@@ -216,7 +222,7 @@ else:
         if not user_name:
             st.warning("이름을 입력해주세요.")
         elif not st.session_state['config']:
-            st.warning("현재 진행 중인 시책 데이타가 없습니다.")
+            st.warning("현재 진행 중인 시책 데이터가 없습니다.")
         else:
             calculated_results = []
             total_prize_sum = 0
@@ -254,7 +260,7 @@ else:
                                 })
                                 total_prize_sum += prize
                                 
-                            else: # 브릿지 시책
+                            else: 
                                 raw_prev = match[cfg['col_val_prev']].values[0]
                                 raw_curr = match[cfg['col_val_curr']].values[0]
                                 try: val_prev = float(str(raw_prev).replace(',', ''))
@@ -281,15 +287,14 @@ else:
                                 })
                                 total_prize_sum += prize
                     except Exception as e:
-                        pass # 사용자가 못 찾는 에러는 스킵
+                        pass 
 
-            # --- 화면 렌더링 ---
             if len(calculated_results) > 0:
-                # 1) 요약표
+                # 1) 요약표 렌더링 (블루 그라데이션 적용)
                 summary_html = f"""<div class="summary-card">
-<div class="summary-label">{user_name} 팀장님의 총 확보한 시상금</div>
+<div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
 <div class="summary-total">{total_prize_sum:,.0f}원</div>
-<div class="toss-divider" style="margin-bottom:20px;"></div>"""
+<div class="summary-divider"></div>"""
                 
                 for res in calculated_results:
                     summary_html += f"""<div class="data-row" style="padding: 6px 0;">
@@ -299,7 +304,7 @@ else:
                 summary_html += "</div>"
                 st.markdown(summary_html, unsafe_allow_html=True)
                 
-                # 2) 개별 상세 카드
+                # 2) 개별 상세 카드 렌더링
                 for res in calculated_results:
                     if res['type'] == "구간":
                         card_html = f"""<div class="toss-card">
