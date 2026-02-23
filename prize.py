@@ -111,6 +111,7 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
     }
     
+    /* 폴더 및 기타 버튼 스타일 */
     .del-btn-container button {
         background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
         height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
@@ -120,9 +121,14 @@ st.markdown("""
         height: 80px !important; font-size: 1.3rem !important; font-weight: 700 !important;
         border-radius: 15px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
     }
+    .agent-btn > button {
+        background-color: #ffffff !important; color: #3182f6 !important; border: 2px solid #3182f6 !important;
+        height: 60px !important; font-size: 1.2rem !important; font-weight: 700 !important;
+        border-radius: 12px !important; margin-bottom: 5px !important; margin-top: 5px !important;
+    }
     .back-btn > button {
-        background-color: #f2f4f6 !important; color: #191f28 !important; border: none !important;
-        height: 50px !important; font-size: 1.1rem !important; margin-bottom: 10px !important;
+        background-color: #e5e8eb !important; color: #191f28 !important; border: none !important;
+        height: 50px !important; font-size: 1.1rem !important; margin-bottom: 10px !important; margin-top: 0px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -219,7 +225,7 @@ def calculate_agent_performance(target_code):
     return calculated_results, total_prize_sum
 
 def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_text=False):
-    """실적을 카드 형태로 예쁘게 출력하고, 필요시 복사용 텍스트를 제공합니다."""
+    """실적을 카드 형태로 예쁘게 출력하고, 카톡 복사용 텍스트를 제공합니다."""
     if len(calculated_results) == 0: return
 
     summary_html = (
@@ -229,7 +235,10 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
         f"<div class='summary-divider'></div>"
     )
     
-    share_text = f"🎯 [{user_name} 팀장님 실적 현황]\n💰 총 확보 시상금: {total_prize_sum:,.0f}원\n\n"
+    # 🌟 카카오톡 공유용 텍스트 예쁘게 생성 🌟
+    share_text = f"🎯 [{user_name} 팀장님 실적 현황]\n"
+    share_text += f"💰 총 확보 시상금: {total_prize_sum:,.0f}원\n"
+    share_text += "────────────────\n"
     
     for res in calculated_results:
         if res['type'] in ["구간", "브릿지1"]:
@@ -247,7 +256,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
                 f"</div>"
             )
-            share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (차월 {int(res['curr_req']//10000)}만 조건)\n"
+            share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (차월 {int(res['curr_req']//10000)}만 달성조건)\n"
             
     summary_html += "</div>"
     st.markdown(summary_html, unsafe_allow_html=True)
@@ -307,13 +316,15 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
                 f"</div></div>"
             )
-            share_text += f"\n[{res['name']}]\n- 당월실적: {res['val']:,.0f}원\n- 확보예정: {res['prize']:,.0f}원 (차월 조건)\n"
+            share_text += f"\n[{res['name']}]\n- 당월실적: {res['val']:,.0f}원\n- 확보예정: {res['prize']:,.0f}원 (차월조건)\n"
             
         st.markdown(card_html, unsafe_allow_html=True)
 
     if show_share_text:
-        st.info("💡 아래 텍스트를 복사해서 카카오톡으로 바로 공유하실 수 있습니다.")
-        st.text_area("카톡 공유용 텍스트", value=share_text, height=200)
+        st.markdown("<h4 style='color:#191f28; font-weight:700; margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
+        st.info("💡 아래 텍스트 박스 안의 글자를 모두 복사해서, 해당 설계사의 카카오톡 채팅창에 붙여넣기 하시면 링크 없이 바로 시상 내용을 보여줄 수 있습니다.")
+        st.text_area("카카오톡 복사용 텍스트", value=share_text, height=350)
+
 
 # ==========================================
 # 📱 1. 최상단: 메뉴 선택 탭
@@ -344,6 +355,7 @@ if mode == "👥 매니저 관리":
         
         step = st.session_state.get('mgr_step', 'main')
         
+        # 📂 [단계 1] 메인 카테고리 선택
         if step == 'main':
             st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
@@ -362,6 +374,7 @@ if mode == "👥 매니저 관리":
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
                 
+        # 📂 [단계 2] 구간(폴더) 선택
         elif step == 'tiers':
             st.markdown('<div class="back-btn">', unsafe_allow_html=True)
             if st.button("⬅️ 뒤로가기", use_container_width=False):
@@ -372,14 +385,12 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 정확한 미달 구간 하드코딩 (50만: 40~50미만)
             ranges = {
                 500000: (400000, 500000),
                 300000: (200000, 300000),
                 200000: (100000, 200000),
                 100000: (0, 100000)
             }
-            
             for t, (min_v, max_v) in ranges.items():
                 st.markdown('<div class="folder-btn" style="margin-bottom:10px;">', unsafe_allow_html=True)
                 if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만)", use_container_width=True, key=f"t_{t}"):
@@ -390,9 +401,10 @@ if mode == "👥 매니저 관리":
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
                 
+        # 👥 [단계 3] 대상자 이름 명단 리스트
         elif step == 'list':
             st.markdown('<div class="back-btn">', unsafe_allow_html=True)
-            if st.button("⬅️ 뒤로가기", use_container_width=False):
+            if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'tiers'
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
@@ -403,7 +415,7 @@ if mode == "👥 매니저 관리":
             max_v = st.session_state.mgr_max_v
             
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem;'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
-            st.info("💡 화면을 스크린샷으로 캡처하시거나, 카드 하단의 '카톡 공유용 텍스트'를 복사해 사용하세요.")
+            st.info("💡 이름을 클릭하면 상세 실적을 확인하고 카톡으로 전송할 수 있습니다.")
             
             agents = {}
             for cfg in st.session_state['config']:
@@ -412,47 +424,65 @@ if mode == "👥 매니저 관리":
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None: continue
                 
-                # 소수점 제거 안전 매칭
                 match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
                 for _, row in match_df.iterrows():
                     code = safe_str(row.get(cfg.get('col_code', '')))
                     name = safe_str(row.get(cfg.get('col_name', '')))
-                    if code and name:
-                        agents[code] = name
+                    if code and name: agents[code] = name
             
             if not agents:
-                st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.\n\n👉 [시스템 관리자 모드] - [매니저코드(비번) 컬럼]이 정확히 설정되어 있는지 확인 후 저장해주세요.")
+                st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.")
             else:
-                found_anyone = False
+                near_agents = []
                 for code, name in agents.items():
-                    calc_results, total_prize = calculate_agent_performance(code)
+                    calc_results, _ = calculate_agent_performance(code)
                     
-                    is_near = False
                     for res in calc_results:
                         if cat == "구간" and res['type'] != "구간": continue
                         if cat == "브릿지" and "브릿지" not in res['type']: continue
                         
-                        # 1기간은 현재실적, 2기간/구간은 누적실적 기준으로 평가
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
                         if min_v <= val < max_v:
-                            is_near = True
+                            near_agents.append((code, name, val))
                             break
-                            
-                    if is_near:
-                        found_anyone = True
-                        st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:20px; border:2px solid #e5e8eb; margin-top:20px; margin-bottom:30px;'>", unsafe_allow_html=True)
-                        st.markdown(f"<h4 style='color:#3182f6; font-weight:800; font-size:1.5rem; margin-top:0; text-align:center;'>👤 {name} 설계사님 ({cat} 근접)</h4>", unsafe_allow_html=True)
-                        
-                        render_ui_cards(name, calc_results, total_prize, show_share_text=True)
-                        
-                        user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
-                        if os.path.exists(user_leaflet_path):
-                            st.image(user_leaflet_path, use_container_width=True)
-                            
-                        st.markdown("</div>", unsafe_allow_html=True)
                 
-                if not found_anyone:
+                if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
+                else:
+                    for code, name, val in near_agents:
+                        st.markdown('<div class="agent-btn">', unsafe_allow_html=True)
+                        if st.button(f"👤 {name} 설계사님 (현재 {val:,.0f}원)", use_container_width=True, key=f"btn_{code}"):
+                            st.session_state.mgr_selected_code = code
+                            st.session_state.mgr_selected_name = name
+                            st.session_state.mgr_step = 'detail'
+                            st.rerun()
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+        # 👤 [단계 4] 특정 설계사 상세 정보 및 카톡 전송 화면
+        elif step == 'detail':
+            st.markdown('<div class="back-btn">', unsafe_allow_html=True)
+            if st.button("⬅️ 명단으로 돌아가기", use_container_width=False):
+                st.session_state.mgr_step = 'list'
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            code = st.session_state.mgr_selected_code
+            name = st.session_state.mgr_selected_name
+            cat = st.session_state.mgr_category
+            
+            st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:20px; border:2px solid #e5e8eb; margin-top:10px; margin-bottom:30px;'>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='color:#3182f6; font-weight:800; font-size:1.5rem; margin-top:0; text-align:center;'>👤 {name} 설계사님 ({cat} 상세)</h4>", unsafe_allow_html=True)
+            
+            calc_results, total_prize = calculate_agent_performance(code)
+            
+            # 카톡 텍스트가 포함된 UI 렌더링
+            render_ui_cards(name, calc_results, total_prize, show_share_text=True)
+            
+            user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
+            if os.path.exists(user_leaflet_path):
+                st.image(user_leaflet_path, use_container_width=True)
+                
+            st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # 🔒 3. 시스템 관리자 모드
