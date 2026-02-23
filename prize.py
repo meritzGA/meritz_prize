@@ -76,6 +76,23 @@ st.markdown("""
     .data-label { color: #8b95a1; font-size: 1.1rem; word-break: keep-all; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
     
+    /* 🌟 상위 구간 부족 금액 강조 디자인 🌟 */
+    .shortfall-row {
+        background-color: #fff0f0; 
+        padding: 14px; 
+        border-radius: 12px; 
+        margin-top: 15px; 
+        margin-bottom: 5px;
+        border: 2px dashed #ff4b4b; 
+        text-align: center;
+    }
+    .shortfall-text {
+        color: #d9232e; 
+        font-size: 1.2rem; 
+        font-weight: 800; 
+        word-break: keep-all;
+    }
+
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; flex-wrap: nowrap; }
     .prize-label { color: #191f28; font-size: 1.3rem; font-weight: 700; word-break: keep-all; white-space: nowrap; }
     .prize-value { color: rgb(128, 0, 0); font-size: 1.8rem; font-weight: 800; white-space: nowrap; text-align: right; } 
@@ -110,7 +127,7 @@ st.markdown("""
         color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; 
         margin-top: 5px; margin-bottom: 5px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
-        white-space: normal !important; /* 긴 텍스트 줄바꿈 허용 */
+        white-space: normal !important; 
     }
     
     @media (max-width: 450px) {
@@ -121,6 +138,7 @@ st.markdown("""
         .data-label { font-size: 1rem !important; }
         .data-value { font-size: 1.15rem !important; }
         .toss-title { font-size: 1.4rem !important; }
+        .shortfall-text { font-size: 1.05rem !important; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -139,7 +157,6 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code: continue
         
-        # 소수점 오류 방지 비교
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
@@ -164,11 +181,14 @@ def calculate_agent_performance(target_code):
                         prize = (tier_prev + curr_req) * (calc_rate / 100)
                         break
                         
+            # 브릿지 1기간 당월 필수 달성 조건 남은 금액
+            shortfall_curr = curr_req - val_curr if val_curr < curr_req else 0
+                        
             calculated_results.append({
                 "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지1",
                 "val_prev": val_prev, "tier_prev": tier_prev,
                 "val_curr": val_curr, "curr_req": curr_req,
-                "rate": calc_rate, "prize": prize
+                "rate": calc_rate, "prize": prize, "shortfall_curr": shortfall_curr
             })
             total_prize_sum += prize
             
@@ -188,10 +208,19 @@ def calculate_agent_performance(target_code):
                     
             if tier_achieved > 0:
                 prize = (tier_achieved + curr_req) * (calc_rate / 100)
+                
+            # 상위 구간 찾기 로직
+            next_tier = None
+            for amt, rate in reversed(cfg['tiers']): # 오름차순으로 탐색
+                if val_curr < amt:
+                    next_tier = amt
+                    break
+            shortfall = next_tier - val_curr if next_tier else 0
             
             calculated_results.append({
                 "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
-                "val": val_curr, "tier": tier_achieved, "rate": calc_rate, "prize": prize, "curr_req": curr_req
+                "val": val_curr, "tier": tier_achieved, "rate": calc_rate, "prize": prize, 
+                "curr_req": curr_req, "next_tier": next_tier, "shortfall": shortfall
             })
             total_prize_sum += prize
 
@@ -207,10 +236,19 @@ def calculate_agent_performance(target_code):
                     calc_rate = rate
                     prize = tier_achieved * (calc_rate / 100) 
                     break
+                    
+            # 상위 구간 찾기 로직
+            next_tier = None
+            for amt, rate in reversed(cfg['tiers']): # 오름차순으로 탐색
+                if val < amt:
+                    next_tier = amt
+                    break
+            shortfall = next_tier - val if next_tier else 0
             
             calculated_results.append({
                 "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "구간",
-                "val": val, "tier": tier_achieved, "rate": calc_rate, "prize": prize
+                "val": val, "tier": tier_achieved, "rate": calc_rate, "prize": prize,
+                "next_tier": next_tier, "shortfall": shortfall
             })
             total_prize_sum += prize
             
@@ -253,6 +291,14 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     st.markdown(summary_html, unsafe_allow_html=True)
     
     for res in calculated_results:
+        shortfall_html = ""
+        
+        # 🌟 상위 구간 남은 금액 HTML 생성 🌟
+        if res.get('shortfall', 0) > 0 and res.get('next_tier'):
+            shortfall_html = f"<div class='shortfall-row'><span class='shortfall-text'>🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!</span></div>"
+        elif res.get('shortfall_curr', 0) > 0 and res.get('curr_req'):
+            shortfall_html = f"<div class='shortfall-row'><span class='shortfall-text'>🚨 당월 필수목표({int(res['curr_req']//10000)}만)까지 {res['shortfall_curr']:,.0f}원 부족!</span></div>"
+        
         if res['type'] == "구간":
             card_html = (
                 f"<div class='toss-card'>"
@@ -261,6 +307,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"<div class='data-row'><span class='data-label'>현재 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
                 f"<div class='data-row'><span class='data-label'>도달한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
                 f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                f"{shortfall_html}"
                 f"<div class='toss-divider'></div>"
                 f"<div class='prize-row'>"
                 f"<span class='prize-label'>확보한 시상금</span>"
@@ -268,6 +315,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"</div></div>"
             )
             share_text += f"\n[{res['name']}]\n- 현재실적: {res['val']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
+            if res.get('shortfall', 0) > 0:
+                share_text += f"🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!\n"
             
         elif res['type'] == "브릿지1":
             card_html = (
@@ -285,6 +334,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"<span class='data-value'>{res['val_curr']:,.0f}원</span>"
                 f"</div>"
                 f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                f"{shortfall_html}"
                 f"<div class='toss-divider'></div>"
                 f"<div class='prize-row'>"
                 f"<span class='prize-label'>확보한 시상금</span>"
@@ -292,6 +342,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"</div></div>"
             )
             share_text += f"\n[{res['name']}]\n- 당월실적: {res['val_curr']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
+            if res.get('shortfall_curr', 0) > 0:
+                share_text += f"🚨 당월 목표까지 {res['shortfall_curr']:,.0f}원 부족!\n"
             
         elif res['type'] == "브릿지2":
             card_html = (
@@ -301,6 +353,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"<div class='data-row'><span class='data-label'>당월 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
                 f"<div class='data-row'><span class='data-label'>확보한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
                 f"<div class='data-row'><span class='data-label'>예상 적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                f"{shortfall_html}"
                 f"<div class='toss-divider'></div>"
                 f"<div class='prize-row'>"
                 f"<span class='prize-label'>차월 {int(res['curr_req']//10000)}만원 달성시 시상금</span>"
@@ -308,6 +361,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 f"</div></div>"
             )
             share_text += f"\n[{res['name']}]\n- 당월실적: {res['val']:,.0f}원\n- 확보예정: {res['prize']:,.0f}원 (차월조건)\n"
+            if res.get('shortfall', 0) > 0:
+                share_text += f"🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!\n"
             
         st.markdown(card_html, unsafe_allow_html=True)
 
@@ -345,7 +400,6 @@ if mode == "👥 매니저 관리":
         
         step = st.session_state.get('mgr_step', 'main')
         
-        # 📂 [단계 1] 메인 카테고리 선택
         if step == 'main':
             st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
@@ -360,7 +414,6 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_category = '브릿지'
                     st.rerun()
                 
-        # 📂 [단계 2] 구간(폴더) 선택 (인원수 표시 포함)
         elif step == 'tiers':
             if st.button("⬅️ 뒤로가기", use_container_width=False):
                 st.session_state.mgr_step = 'main'
@@ -412,7 +465,6 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_max_v = max_v
                     st.rerun()
                 
-        # 👥 [단계 3] 대상자 이름 명단 리스트 (지사명 + 이름 표기 및 가나다 정렬)
         elif step == 'list':
             if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'tiers'
@@ -465,7 +517,6 @@ if mode == "👥 매니저 관리":
                 if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
-                    # 🌟 지사명(agency) 기준 가나다순 정렬, 지사명이 같으면 이름(name) 순 정렬 🌟
                     near_agents.sort(key=lambda x: (x[2], x[1]))
                     
                     for code, name, agency, val in near_agents:
@@ -476,7 +527,6 @@ if mode == "👥 매니저 관리":
                             st.session_state.mgr_step = 'detail'
                             st.rerun()
 
-        # 👤 [단계 4] 특정 설계사 상세 정보 및 카톡 전송 화면
         elif step == 'detail':
             if st.button("⬅️ 명단으로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'list'
