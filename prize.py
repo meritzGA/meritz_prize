@@ -1,3 +1,7 @@
+매니저 화면에서 근접 대상자 명단을 볼 때, 대리점(지사명)을 기준으로 가나다순 정렬되도록 코드를 추가했습니다! (만약 지사명이 같다면 설계사 이름의 가나다순으로 정렬됩니다.)
+이제 소속 인원이 많아도 지사별로 묶여서 깔끔하게 표시되므로, 관리하시기가 훨씬 수월해지실 겁니다.
+아래 완성된 코드로 app.py를 덮어쓰기 해주세요!
+최종 수정된 app.py 전체 코드 (지사명 정렬 적용)
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -369,7 +373,6 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # --- 🌟 폴더별 인원수 미리 계산 🌟 ---
             agents = {}
             for cfg in st.session_state['config']:
                 mgr_col = cfg.get('col_manager', '')
@@ -404,7 +407,6 @@ if mode == "👥 매니저 관리":
                                 counts[t] += 1
                                 break
             
-            # 폴더 생성 및 표시
             for t, (min_v, max_v) in ranges.items():
                 count = counts[t]
                 if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만) - 총 {count}명", use_container_width=True, key=f"t_{t}"):
@@ -414,7 +416,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_max_v = max_v
                     st.rerun()
                 
-        # 👥 [단계 3] 대상자 이름 명단 리스트 (지사명 + 이름 표기)
+        # 👥 [단계 3] 대상자 이름 명단 리스트 (지사명 + 이름 표기 및 가나다 정렬)
         elif step == 'list':
             if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'tiers'
@@ -439,7 +441,6 @@ if mode == "👥 매니저 관리":
                 for _, row in match_df.iterrows():
                     code = safe_str(row.get(cfg.get('col_code', '')))
                     name = safe_str(row.get(cfg.get('col_name', '')))
-                    # 🌟 대리점 지사명 우선 추출, 없으면 지점명 대체 🌟
                     agency = safe_str(row.get(cfg.get('col_agency', '')))
                     if not agency: 
                         agency = safe_str(row.get(cfg.get('col_branch', '')))
@@ -468,11 +469,11 @@ if mode == "👥 매니저 관리":
                 if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
+                    # 🌟 지사명(agency) 기준 가나다순 정렬, 지사명이 같으면 이름(name) 순 정렬 🌟
+                    near_agents.sort(key=lambda x: (x[2], x[1]))
+                    
                     for code, name, agency, val in near_agents:
-                        # 🌟 명단 버튼에 [지사명] 이름 형식 적용 🌟
                         display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
-                        
-                        # 명단 버튼은 파란색 테두리 CSS를 위해 Primary 대신 기본 secondary에 css 입힘 (위 style 참조)
                         if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
                             st.session_state.mgr_selected_code = code
                             st.session_state.mgr_selected_name = f"[{agency}] {name}"
@@ -770,3 +771,4 @@ else:
                     st.image(user_leaflet_path, use_container_width=True)
             else:
                 st.error("해당 조건의 실적 데이터가 없습니다.")
+
