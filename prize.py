@@ -53,10 +53,9 @@ st.markdown("""
         letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
-    /* 스트림릿 입력 폼(Form) 카드로 만듦 */
+    /* 스트림릿 폼 스타일링 */
     [data-testid="stForm"] {
-        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
+        background-color: transparent; border: none; padding: 0; margin-bottom: 24px;
     }
 
     /* 요약 카드 */
@@ -78,8 +77,8 @@ st.markdown("""
     }
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
     
-    /* 🌟 사용자 화면: 시책 설명 텍스트를 진한 파란색 굵은 글씨로 변경 🌟 */
-    .toss-desc { font-size: 1.1rem; color: #004080; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.3px; }
+    /* 🌟 사용자 화면: 시책 설명 텍스트를 메리츠 다크 레드로 변경 🌟 */
+    .toss-desc { font-size: 1.15rem; color: rgb(128, 0, 0); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.3px; }
     
     /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
@@ -100,6 +99,7 @@ st.markdown("""
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important;
         border: 1px solid #e5e8eb !important; border-radius: 12px !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
     }
     div[data-testid="stSelectbox"] > div {
         background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important;
@@ -110,12 +110,13 @@ st.markdown("""
         font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
         color: white !important; border: none !important; width: 100%; margin-top: 15px; margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
     }
     
     /* 삭제 버튼 전용 스타일 */
     .del-btn-container button {
         background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
-        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important;
+        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -169,7 +170,7 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.success("✅ 파일 업로드 및 저장이 완료되었습니다.")
             st.rerun()
 
-    st.markdown("<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-bottom:20px;'>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     col1, col2 = st.columns([7, 3])
     with col1:
         st.markdown(f"**현재 저장된 파일 ({len(st.session_state['raw_data'])}개)**")
@@ -182,7 +183,7 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
         
-    st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
+    st.divider()
     
     if not st.session_state['raw_data']:
         st.info("현재 업로드된 파일이 없습니다. 위에 파일을 추가해주세요.")
@@ -199,13 +200,12 @@ if mode == "⚙️ 시스템 관리자 모드":
                     if os.path.exists(pkl_path): os.remove(pkl_path)
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin:10px 0; opacity:0.3;'>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
     # [영역 2] 시책 항목 관리
     # ---------------------------------------------------------
-    st.divider()
-    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
     
     col_add, col_del_all = st.columns(2)
     with col_add:
@@ -245,7 +245,7 @@ if mode == "⚙️ 시스템 관리자 모드":
         if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
         if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
 
-        st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-top:20px;'>", unsafe_allow_html=True)
+        st.divider()
         
         c_title, c_del = st.columns([8, 2])
         with c_title:
@@ -259,13 +259,8 @@ if mode == "⚙️ 시스템 관리자 모드":
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         
-        st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
-        
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
-        
-        # 🌟 관리자 모드: 시책 설명 입력창 (원래대로 기본 텍스트 디자인 복구) 🌟
         cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
-        
         cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 구간 확보)"], 
                                index=0 if "구간" in cfg['type'] else (1 if "1기간" in cfg['type'] else 2), horizontal=True, key=f"type_{i}")
         
@@ -309,7 +304,6 @@ if mode == "⚙️ 시스템 관리자 모드":
                 cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
             except:
                 st.error("형식이 올바르지 않습니다.")
-        st.markdown("</div>", unsafe_allow_html=True) 
 
     # ---------------------------------------------------------
     # 🌟 [영역 3] 리플렛(안내 이미지) 관리
@@ -351,8 +345,7 @@ else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     
-    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
-    
+    # 가짜 HTML 박스를 모두 지우고 순수 Streamlit UI만 배치하여 빈 하얀 박스 버그 완벽 해결
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
 
@@ -396,7 +389,6 @@ else:
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
-    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not user_name or not branch_code_input:
@@ -412,7 +404,6 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                # 사용자가 콤보박스에서 설계사 코드를 선택한 경우 데이터 필터링
                 if needs_disambiguation and selected_code and 'col_code' in cfg and cfg['col_code']:
                     match_df = match_df[match_df[cfg['col_code']].fillna('').astype(str).str.strip() == selected_code]
                 
@@ -484,6 +475,7 @@ else:
                         "val": val_curr, "tier": tier_achieved, "rate": calc_rate
                     })
 
+            # 안전한 문자열 묶음 방식 처리
             if len(calculated_results) > 0:
                 summary_html = (
                     f"<div class='summary-card'>"
