@@ -30,36 +30,21 @@ if 'config' not in st.session_state:
 # --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
 st.markdown("""
 <style>
-    /* 전체 배경을 밝은 회색으로 고정 */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
+    span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
     
-    /* 🌟 글씨로 깨지는 Streamlit 기본 화살표/아이콘 완전 숨기기 🌟 */
-    span.material-symbols-rounded, 
-    span[data-testid="stIconMaterial"] {
-        display: none !important;
-    }
-    
-    /* 상단 메뉴 탭 스타일 */
     div[data-testid="stRadio"] > div {
         display: flex; justify-content: center; background-color: #ffffff; 
         padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
-    /* 🌟 메리츠 레드 타이틀 띠지 🌟 */
     .title-band {
         background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
         text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
         letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
-    /* 스트림릿 입력 폼(Form) 카드로 만듦 */
-    [data-testid="stForm"] {
-        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
-    }
-
-    /* 요약 카드 */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -71,7 +56,6 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
-    /* 개별 시책 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
@@ -79,21 +63,17 @@ st.markdown("""
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
     .toss-desc { font-size: 1.1rem; color: #8b95a1; margin-bottom: 24px; }
     
-    /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
     .data-label { color: #8b95a1; font-size: 1.1rem; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
     
-    /* 시상금 강조 행 */
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
     .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
     
-    /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 🌟 시니어 입력창 확대 및 메리츠 컬러 버튼 🌟 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important;
@@ -105,15 +85,14 @@ st.markdown("""
     div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
     div.stButton > button {
-        font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
-        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
-        color: white !important; border: none !important; width: 100%; margin-top: 15px;
+        font-size: 1.2rem !important; font-weight: 700 !important; height: 50px !important;
+        border-radius: 10px !important; color: white !important; border: none !important; width: 100%;
     }
     
-    /* 삭제 버튼 전용 작은 스타일 (일반 버튼에 영향 안 주게) */
+    /* 삭제 버튼 전용 스타일 */
     .del-btn-container button {
-        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important;
         background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
+        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -134,13 +113,16 @@ if mode == "⚙️ 시스템 관리자 모드":
         if admin_pw: st.error("비밀번호가 일치하지 않습니다.")
         st.stop()
         
-    st.success("인증 성공! 변경 후 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
+    st.success("인증 성공! 변경 사항은 가장 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
-    # --- 1. 파일 업로드 및 관리 섹션 ---
-    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
+    # ---------------------------------------------------------
+    # [영역 1] 파일 업로드 및 관리 (독립된 영역)
+    # ---------------------------------------------------------
+    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
     
     if uploaded_files:
+        new_upload = False
         for file in uploaded_files:
             if file.name not in st.session_state['raw_data']:
                 if file.name.endswith('.csv'):
@@ -157,51 +139,60 @@ if mode == "⚙️ 시스템 관리자 모드":
                 else: df = pd.read_excel(file)
                 
                 st.session_state['raw_data'][file.name] = df
-                # 서버에 즉시 영구 저장
                 df.to_pickle(os.path.join(DATA_DIR, f"{file.name}.pkl"))
+                new_upload = True
                 
-        st.success("✅ 파일 업로드 및 저장이 완료되었습니다.")
-        st.rerun() # 업로드 직후 목록 갱신
+        if new_upload:
+            st.success("✅ 파일 업로드 및 저장이 완료되었습니다.")
+            st.rerun()
 
-    # 업로드된 파일 목록 및 삭제 기능
-    if st.session_state['raw_data']:
-        st.markdown("<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-bottom:20px;'>", unsafe_allow_html=True)
-        col1, col2 = st.columns([7, 3])
-        with col1:
-            st.markdown(f"**현재 저장된 파일 ({len(st.session_state['raw_data'])}개)**")
-        with col2:
-            st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
-            if st.button("🗑️ 전체 파일 삭제", use_container_width=True):
-                st.session_state['raw_data'].clear()
-                for f in os.listdir(DATA_DIR):
-                    if f.endswith('.pkl'): os.remove(os.path.join(DATA_DIR, f))
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-        st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
+    st.markdown("<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-bottom:20px;'>", unsafe_allow_html=True)
+    col1, col2 = st.columns([7, 3])
+    with col1:
+        st.markdown(f"**현재 저장된 파일 ({len(st.session_state['raw_data'])}개)**")
+    with col2:
+        st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
+        if st.button("🗑️ 전체 파일 삭제", use_container_width=True):
+            st.session_state['raw_data'].clear()
+            for f in os.listdir(DATA_DIR):
+                if f.endswith('.pkl'): os.remove(os.path.join(DATA_DIR, f))
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
         
+    st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
+    
+    if not st.session_state['raw_data']:
+        st.info("현재 업로드된 파일이 없습니다. 위에 파일을 드래그 앤 드롭하여 추가해주세요.")
+    else:
         for file_name in list(st.session_state['raw_data'].keys()):
             col_name, col_btn = st.columns([8, 2])
             with col_name:
                 st.write(f"📄 {file_name}")
             with col_btn:
                 st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
-                if st.button("삭제", key=f"del_file_{file_name}", use_container_width=True):
+                if st.button("개별 삭제", key=f"del_file_{file_name}", use_container_width=True):
                     del st.session_state['raw_data'][file_name]
                     pkl_path = os.path.join(DATA_DIR, f"{file_name}.pkl")
                     if os.path.exists(pkl_path): os.remove(pkl_path)
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- 2. 시책 항목 상세 설정 섹션 ---
-    if st.session_state['raw_data']:
-        st.divider()
-        st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>2. 시책 항목 상세 설정</h3>", unsafe_allow_html=True)
-        
-        col_add, col_del_all = st.columns([7, 3])
-        with col_add:
-            if st.button("➕ 시책 항목 추가"):
+    # ---------------------------------------------------------
+    # [영역 2] 시책 항목 관리 (파일 관리와 완전 독립)
+    # ---------------------------------------------------------
+    st.divider()
+    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
+    
+    # 🌟 시책 추가 / 삭제 버튼을 항상 보이도록 상단에 배치 🌟
+    col_add, col_del_all = st.columns(2)
+    with col_add:
+        # 추가 버튼 스타일(파란색)
+        st.markdown('<style>div.row-widget.stButton > button[kind="primary"] { background-color: #3182f6 !important; }</style>', unsafe_allow_html=True)
+        if st.button("➕ 신규 시상 항목 추가", type="primary", use_container_width=True):
+            if not st.session_state['raw_data']:
+                st.error("⚠️ 먼저 위에서 실적 파일을 1개 이상 업로드해야 시상을 추가할 수 있습니다.")
+            else:
                 first_file = list(st.session_state['raw_data'].keys())[0]
                 st.session_state['config'].append({
                     "name": f"신규 시책 {len(st.session_state['config'])+1}",
@@ -211,90 +202,103 @@ if mode == "⚙️ 시스템 관리자 모드":
                     "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
                 })
                 st.rerun()
-        with col_del_all:
+                
+    with col_del_all:
+        st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
+        if st.button("🗑️ 모든 시상 항목 일괄 삭제", use_container_width=True):
+            st.session_state['config'].clear()
+            with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
+                json.dump([], f, ensure_ascii=False)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    if not st.session_state['config']:
+        st.info("현재 설정된 시상 항목이 없습니다. [➕ 신규 시상 항목 추가] 버튼을 눌러주세요.")
+
+    for i, cfg in enumerate(st.session_state['config']):
+        # 기존 데이터 호환성 보장
+        if 'desc' not in cfg: cfg['desc'] = ""
+        if 'type' not in cfg: cfg['type'] = "구간 시책"
+        if 'col_code' not in cfg: cfg['col_code'] = ""
+        if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') 
+        if 'col_agency' not in cfg: cfg['col_agency'] = ""
+        if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
+        if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
+        if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
+
+        st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-top:20px;'>", unsafe_allow_html=True)
+        
+        c_title, c_del = st.columns([8, 2])
+        with c_title:
+            st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin:0;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
+        with c_del:
             st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
-            if st.button("🗑️ 전체 시책 삭제", use_container_width=True):
-                st.session_state['config'].clear()
+            if st.button("개별 삭제", key=f"del_cfg_{i}", use_container_width=True):
+                st.session_state['config'].pop(i)
                 with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
-                    json.dump([], f, ensure_ascii=False)
+                    json.dump(st.session_state['config'], f, ensure_ascii=False)
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
-
-        for i, cfg in enumerate(st.session_state['config']):
-            # 기존 데이터 호환성 보장
-            if 'desc' not in cfg: cfg['desc'] = ""
-            if 'type' not in cfg: cfg['type'] = "구간 시책"
-            if 'col_code' not in cfg: cfg['col_code'] = ""
-            if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') 
-            if 'col_agency' not in cfg: cfg['col_agency'] = ""
-            if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
-            if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
-            if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
-
-            st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-top:20px;'>", unsafe_allow_html=True)
-            
-            c_title, c_del = st.columns([8, 2])
-            with c_title:
-                st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin:0;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
-            with c_del:
-                st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
-                if st.button("🗑️ 삭제", key=f"del_cfg_{i}", use_container_width=True):
-                    st.session_state['config'].pop(i)
-                    with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
-                        json.dump(st.session_state['config'], f, ensure_ascii=False)
-                    st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-            
-            st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
-            
-            cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
-            cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
-            cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 구간 확보)"], 
-                                   index=0 if "구간" in cfg['type'] else (1 if "1기간" in cfg['type'] else 2), horizontal=True, key=f"type_{i}")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                file_opts = list(st.session_state['raw_data'].keys())
-                cfg['file'] = st.selectbox(f"대상 파일", file_opts, index=file_opts.index(cfg['file']) if cfg['file'] in file_opts else 0, key=f"file_{i}")
-                cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
-                def get_idx(val, opts): return opts.index(val) if val in opts else 0
-
-                st.info("💡 동명이인 식별을 위해 아래 4개 컬럼을 정확히 지정해주세요.")
-                cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
-                cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
-                cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
-                cfg['col_agency'] = st.selectbox("대리점/지사(소속) 컬럼", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
+        
+        st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
+        
+        cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
+        cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
+        cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 구간 확보)"], 
+                               index=0 if "구간" in cfg['type'] else (1 if "1기간" in cfg['type'] else 2), horizontal=True, key=f"type_{i}")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            file_opts = list(st.session_state['raw_data'].keys())
+            if not file_opts:
+                st.error("파일이 모두 삭제되어 항목을 설정할 수 없습니다. 파일을 다시 업로드해주세요.")
+                continue
                 
-                if "구간" in cfg['type'] or "2기간" in cfg['type']:
-                    col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
-                    label = "당월 실적 수치 컬럼" if "2기간" in cfg['type'] else "실적 수치 컬럼"
-                    cfg[col_key] = st.selectbox(label, cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
-                else: 
-                    cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
-                    cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
-                    cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
+            cfg['file'] = st.selectbox(f"대상 파일", file_opts, index=file_opts.index(cfg['file']) if cfg['file'] in file_opts else 0, key=f"file_{i}")
+            cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
+            def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
-            with col2:
-                if "구간" in cfg['type'] or "2기간" in cfg['type']: st.write("📈 구간 설정 (달성구간금액,지급률%)")
-                else: st.write("📈 전월 구간 설정 (전월구간금액,지급률%)")
-                    
-                tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
-                tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
-                try:
-                    new_tiers = []
-                    for line in tier_input.strip().split('\n'):
-                        if ',' in line:
-                            parts = line.split(',')
-                            new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
-                    cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
-                except:
-                    st.error("형식이 올바르지 않습니다.")
-            st.markdown("</div>", unsafe_allow_html=True) 
-                    
-        if st.button("✅ 설정 완료 및 서버에 반영하기", type="primary"):
+            st.info("💡 동명이인 식별을 위해 아래 4개 컬럼을 정확히 지정해주세요.")
+            cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
+            cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
+            cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
+            cfg['col_agency'] = st.selectbox("대리점/지사(소속) 컬럼", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
+            
+            if "구간" in cfg['type'] or "2기간" in cfg['type']:
+                col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
+                label = "당월 실적 수치 컬럼" if "2기간" in cfg['type'] else "실적 수치 컬럼"
+                cfg[col_key] = st.selectbox(label, cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
+            else: 
+                cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
+                cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
+                cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
+
+        with col2:
+            if "구간" in cfg['type'] or "2기간" in cfg['type']: st.write("📈 구간 설정 (달성구간금액,지급률%)")
+            else: st.write("📈 전월 구간 설정 (전월구간금액,지급률%)")
+                
+            tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
+            tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
+            try:
+                new_tiers = []
+                for line in tier_input.strip().split('\n'):
+                    if ',' in line:
+                        parts = line.split(',')
+                        new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
+                cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
+            except:
+                st.error("형식이 올바르지 않습니다.")
+        st.markdown("</div>", unsafe_allow_html=True) 
+
+    # 서버 저장 버튼 (제일 아래 고정)
+    if st.session_state['config']:
+        st.markdown("<br>", unsafe_allow_html=True)
+        # 저장 버튼 스타일 (메리츠 레드)
+        st.markdown('<style>div.row-widget.stButton > button[kind="secondary"] { background-color: rgb(128, 0, 0) !important; color: white !important; font-size: 1.5rem !important; height: 70px !important; }</style>', unsafe_allow_html=True)
+        if st.button("✅ 모든 설정 완료 및 서버에 반영하기", use_container_width=True):
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
                 json.dump(st.session_state['config'], f, ensure_ascii=False)
-            st.success("서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
+            st.success("✅ 서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
 # ==========================================
 # 🏆 3. 사용자 모드
@@ -447,64 +451,3 @@ else:
                 
                 for res in calculated_results:
                     if res['type'] in ["구간", "브릿지1"]:
-                        summary_html += f"""<div class="data-row" style="padding: 6px 0;">
-<span class="summary-item-name">{res['name']}</span>
-<span class="summary-item-val">{res['prize']:,.0f}원</span>
-</div>"""
-                    else: 
-                        summary_html += f"""<div class="data-row" style="padding: 6px 0;">
-<span class="summary-item-name">{res['name']}</span>
-<span class="summary-item-val" style="color:rgba(255,255,255,0.7);">{res['tier']:,.0f}원 구간 확보</span>
-</div>"""
-                summary_html += "</div>"
-                st.markdown(summary_html, unsafe_allow_html=True)
-                
-                for res in calculated_results:
-                    if res['type'] == "구간":
-                        card_html = f"""<div class="toss-card">
-<div class="toss-title">{res['name']}</div>
-<div class="toss-desc">{res['desc']}</div>
-<div class="data-row"><span class="data-label">현재 누적 실적</span><span class="data-value">{res['val']:,.0f}원</span></div>
-<div class="data-row"><span class="data-label">도달한 구간 기준</span><span class="data-value">{res['tier']:,.0f}원</span></div>
-<div class="data-row"><span class="data-label">적용 지급률</span><span class="data-value">{res['rate']:g}%</span></div>
-<div class="toss-divider"></div>
-<div class="prize-row">
-<span class="prize-label">확보한 시상금</span>
-<span class="prize-value">{res['prize']:,.0f}원</span>
-</div>
-</div>"""
-                    elif res['type'] == "브릿지1":
-                        card_html = f"""<div class="toss-card">
-<div class="toss-title">{res['name']}</div>
-<div class="toss-desc">{res['desc']}</div>
-<div class="data-row">
-<span class="data-label">전월 실적 (인정구간)</span>
-<div style="text-align:right;">
-<div class="data-value">{res['val_prev']:,.0f}원</div>
-<div class="sub-data">({res['tier_prev']:,.0f}원 구간)</div>
-</div>
-</div>
-<div class="data-row">
-<span class="data-label">당월 실적 (목표 {res['curr_req']:,.0f}원)</span>
-<span class="data-value">{res['val_curr']:,.0f}원</span>
-</div>
-<div class="data-row"><span class="data-label">적용 지급률</span><span class="data-value">{res['rate']:g}%</span></div>
-<div class="toss-divider"></div>
-<div class="prize-row">
-<span class="prize-label">확보한 시상금</span>
-<span class="prize-value">{res['prize']:,.0f}원</span>
-</div>
-</div>"""
-                    elif res['type'] == "브릿지2":
-                        card_html = f"""<div class="toss-card">
-<div class="toss-title">{res['name']}</div>
-<div class="toss-desc">{res['desc']}</div>
-<div class="data-row"><span class="data-label">당월 누적 실적</span><span class="data-value">{res['val']:,.0f}원</span></div>
-<div class="data-row"><span class="data-label">예상 지급률</span><span class="data-value">{res['rate']:g}%</span></div>
-<div class="toss-divider"></div>
-<div class="prize-row">
-<span class="prize-label">차월 확보한 브릿지 구간</span>
-<span class="prize-value">{res['tier']:,.0f}원</span>
-</div>
-</div>"""
-                    st.markdown(card_html, unsafe_allow_html=True)
