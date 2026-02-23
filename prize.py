@@ -4,7 +4,7 @@ import numpy as np
 import os
 import json
 
-# 페이지 설정 (사이드바 제거)
+# 페이지 설정
 st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide")
 
 # --- 데이터 영구 저장을 위한 폴더 설정 ---
@@ -26,6 +26,13 @@ if 'config' not in st.session_state:
             st.session_state['config'] = json.load(f)
     else:
         st.session_state['config'] = []
+
+# 엑셀 사번(코드) 소수점(.0) 자동 제거용 안전 함수
+def safe_str(val):
+    if pd.isna(val): return ""
+    s = str(val).strip()
+    if s.endswith('.0'): s = s[:-2]
+    return s
 
 # --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 모바일 최적화) ---
 st.markdown("""
@@ -104,7 +111,6 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
     }
     
-    /* 폴더 및 기타 버튼 스타일 */
     .del-btn-container button {
         background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
         height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
@@ -135,7 +141,8 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code: continue
         
-        match_df = df[df[col_code].fillna('').astype(str).str.strip() == target_code]
+        # 소수점 오류 방지 비교
+        match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
         p_type = cfg.get('type', '구간 시책')
@@ -211,8 +218,8 @@ def calculate_agent_performance(target_code):
             
     return calculated_results, total_prize_sum
 
-def render_ui_cards(user_name, calculated_results, total_prize_sum):
-    """계산된 실적을 바탕으로 예쁜 카드 UI를 출력합니다."""
+def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_text=False):
+    """실적을 카드 형태로 예쁘게 출력하고, 필요시 복사용 텍스트를 제공합니다."""
     if len(calculated_results) == 0: return
 
     summary_html = (
@@ -222,6 +229,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum):
         f"<div class='summary-divider'></div>"
     )
     
+    share_text = f"🎯 [{user_name} 팀장님 실적 현황]\n💰 총 확보 시상금: {total_prize_sum:,.0f}원\n\n"
+    
     for res in calculated_results:
         if res['type'] in ["구간", "브릿지1"]:
             summary_html += (
@@ -230,6 +239,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum):
                 f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
                 f"</div>"
             )
+            share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원\n"
         else: 
             summary_html += (
                 f"<div class='data-row' style='padding: 6px 0;'>"
@@ -237,6 +247,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum):
                 f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
                 f"</div>"
             )
+            share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (차월 {int(res['curr_req']//10000)}만 조건)\n"
+            
     summary_html += "</div>"
     st.markdown(summary_html, unsafe_allow_html=True)
     
@@ -255,6 +267,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum):
                 f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
                 f"</div></div>"
             )
+            share_text += f"\n[{res['name']}]\n- 현재실적: {res['val']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
+            
         elif res['type'] == "브릿지1":
             card_html = (
                 f"<div class='toss-card'>"
@@ -277,6 +291,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum):
                 f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
                 f"</div></div>"
             )
+            share_text += f"\n[{res['name']}]\n- 당월실적: {res['val_curr']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
+            
         elif res['type'] == "브릿지2":
             card_html = (
                 f"<div class='toss-card'>"
@@ -291,11 +307,16 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum):
                 f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
                 f"</div></div>"
             )
+            share_text += f"\n[{res['name']}]\n- 당월실적: {res['val']:,.0f}원\n- 확보예정: {res['prize']:,.0f}원 (차월 조건)\n"
+            
         st.markdown(card_html, unsafe_allow_html=True)
 
+    if show_share_text:
+        st.info("💡 아래 텍스트를 복사해서 카카오톡으로 바로 공유하실 수 있습니다.")
+        st.text_area("카톡 공유용 텍스트", value=share_text, height=200)
 
 # ==========================================
-# 📱 1. 최상단: 메뉴 선택 탭 (이름 정확히 매칭)
+# 📱 1. 최상단: 메뉴 선택 탭
 # ==========================================
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
@@ -308,7 +329,7 @@ if mode == "👥 매니저 관리":
     if 'mgr_logged_in' not in st.session_state: st.session_state.mgr_logged_in = False
     
     if not st.session_state.mgr_logged_in:
-        mgr_code = st.text_input("매니저 코드를 입력하세요", type="password", placeholder="영문/숫자 조합 사번")
+        mgr_code = st.text_input("지원매니저 사번(코드) 또는 이름을 입력하세요", type="password", placeholder="예: 12345 또는 홍길동")
         if st.button("로그인"):
             st.session_state.mgr_logged_in = True
             st.session_state.mgr_code = mgr_code
@@ -351,13 +372,21 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 고정된 목표 구간 폴더 제공
-            targets = [500000, 300000, 200000, 100000]
-            for t in targets:
+            # 정확한 미달 구간 하드코딩 (50만: 40~50미만)
+            ranges = {
+                500000: (400000, 500000),
+                300000: (200000, 300000),
+                200000: (100000, 200000),
+                100000: (0, 100000)
+            }
+            
+            for t, (min_v, max_v) in ranges.items():
                 st.markdown('<div class="folder-btn" style="margin-bottom:10px;">', unsafe_allow_html=True)
-                if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({(t-100000)//10000}만 이상 ~ {t//10000}만 미만)", use_container_width=True, key=f"t_{t}"):
+                if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만)", use_container_width=True, key=f"t_{t}"):
                     st.session_state.mgr_step = 'list'
                     st.session_state.mgr_target = t
+                    st.session_state.mgr_min_v = min_v
+                    st.session_state.mgr_max_v = max_v
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
                 
@@ -370,8 +399,11 @@ if mode == "👥 매니저 관리":
             
             cat = st.session_state.mgr_category
             target = st.session_state.mgr_target
+            min_v = st.session_state.mgr_min_v
+            max_v = st.session_state.mgr_max_v
+            
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem;'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
-            st.info("💡 아래 화면을 캡처(스크린샷)하여 대상 설계사에게 공유해주세요.")
+            st.info("💡 화면을 스크린샷으로 캡처하시거나, 카드 하단의 '카톡 공유용 텍스트'를 복사해 사용하세요.")
             
             agents = {}
             for cfg in st.session_state['config']:
@@ -380,15 +412,16 @@ if mode == "👥 매니저 관리":
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None: continue
                 
-                match_df = df[df[mgr_col].fillna('').astype(str).str.strip() == st.session_state.mgr_code.strip()]
+                # 소수점 제거 안전 매칭
+                match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
                 for _, row in match_df.iterrows():
-                    code = str(row[cfg.get('col_code', '')]).strip()
-                    name = str(row[cfg.get('col_name', '')]).strip()
+                    code = safe_str(row.get(cfg.get('col_code', '')))
+                    name = safe_str(row.get(cfg.get('col_name', '')))
                     if code and name:
                         agents[code] = name
             
             if not agents:
-                st.warning("소속된 설계사 데이터가 없습니다. (관리자 모드에서 '매니저코드 컬럼'이 정확히 설정되었는지 확인하세요.)")
+                st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.\n\n👉 [시스템 관리자 모드] - [매니저코드(비번) 컬럼]이 정확히 설정되어 있는지 확인 후 저장해주세요.")
             else:
                 found_anyone = False
                 for code, name in agents.items():
@@ -399,8 +432,9 @@ if mode == "👥 매니저 관리":
                         if cat == "구간" and res['type'] != "구간": continue
                         if cat == "브릿지" and "브릿지" not in res['type']: continue
                         
+                        # 1기간은 현재실적, 2기간/구간은 누적실적 기준으로 평가
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
-                        if target - 100000 <= val < target:
+                        if min_v <= val < max_v:
                             is_near = True
                             break
                             
@@ -408,11 +442,17 @@ if mode == "👥 매니저 관리":
                         found_anyone = True
                         st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:20px; border:2px solid #e5e8eb; margin-top:20px; margin-bottom:30px;'>", unsafe_allow_html=True)
                         st.markdown(f"<h4 style='color:#3182f6; font-weight:800; font-size:1.5rem; margin-top:0; text-align:center;'>👤 {name} 설계사님 ({cat} 근접)</h4>", unsafe_allow_html=True)
-                        render_ui_cards(name, calc_results, total_prize)
+                        
+                        render_ui_cards(name, calc_results, total_prize, show_share_text=True)
+                        
+                        user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
+                        if os.path.exists(user_leaflet_path):
+                            st.image(user_leaflet_path, use_container_width=True)
+                            
                         st.markdown("</div>", unsafe_allow_html=True)
                 
                 if not found_anyone:
-                    st.info(f"해당 구간({int(target//10000)}만)에 근접한 설계사가 없습니다.")
+                    st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
 
 # ==========================================
 # 🔒 3. 시스템 관리자 모드
@@ -484,7 +524,7 @@ elif mode == "⚙️ 시스템 관리자":
                     if os.path.exists(pkl_path): os.remove(pkl_path)
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown("<hr style='margin:10px 0; opacity:0.3;'>", unsafe_allow_html=True)
+            st.divider()
 
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
     
@@ -660,7 +700,7 @@ else:
                 if not match.empty:
                     if 'col_code' in cfg and cfg['col_code']:
                         for _, row in match.iterrows():
-                            agent_code = str(row[cfg['col_code']]).strip()
+                            agent_code = safe_str(row[cfg['col_code']])
                             if agent_code: codes_found.add(agent_code)
 
     codes_found = {c for c in codes_found if c}
@@ -686,7 +726,7 @@ else:
             calc_results, total_prize = calculate_agent_performance(final_target_code)
             
             if calc_results:
-                render_ui_cards(user_name, calc_results, total_prize)
+                render_ui_cards(user_name, calc_results, total_prize, show_share_text=False)
                 
                 user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
                 if os.path.exists(user_leaflet_path):
