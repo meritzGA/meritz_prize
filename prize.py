@@ -92,6 +92,7 @@ st.markdown("""
     div[data-testid="stSelectbox"] > div {
         background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important;
     }
+    div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
     /* 🔴 메인 동작 버튼 (Primary) - 다크 레드 */
     div.stButton > button[kind="primary"] {
@@ -111,6 +112,16 @@ st.markdown("""
         box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
         white-space: normal !important; /* 긴 텍스트 줄바꿈 허용 */
     }
+    
+    @media (max-width: 450px) {
+        .summary-total { font-size: 2.1rem !important; }
+        .summary-label { font-size: 1.05rem !important; }
+        .prize-label { font-size: 1.1rem !important; }
+        .prize-value { font-size: 1.45rem !important; }
+        .data-label { font-size: 1rem !important; }
+        .data-value { font-size: 1.15rem !important; }
+        .toss-title { font-size: 1.4rem !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,6 +139,7 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code: continue
         
+        # 소수점 오류 방지 비교
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
@@ -326,13 +338,14 @@ if mode == "👥 매니저 관리":
             st.session_state.mgr_step = 'main'
             st.rerun()
     else:
-        if st.button("🚪 로그아웃"):  # Secondary(회색) 적용됨
+        if st.button("🚪 로그아웃"):
             st.session_state.mgr_logged_in = False
             st.rerun()
         st.markdown('<br>', unsafe_allow_html=True)
         
         step = st.session_state.get('mgr_step', 'main')
         
+        # 📂 [단계 1] 메인 카테고리 선택
         if step == 'main':
             st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
@@ -347,6 +360,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_category = '브릿지'
                     st.rerun()
                 
+        # 📂 [단계 2] 구간(폴더) 선택 (인원수 표시 포함)
         elif step == 'tiers':
             if st.button("⬅️ 뒤로가기", use_container_width=False):
                 st.session_state.mgr_step = 'main'
@@ -355,20 +369,52 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
+            # --- 🌟 폴더별 인원수 미리 계산 🌟 ---
+            agents = {}
+            for cfg in st.session_state['config']:
+                mgr_col = cfg.get('col_manager', '')
+                if not mgr_col: continue
+                df = st.session_state['raw_data'].get(cfg['file'])
+                if df is None: continue
+                
+                match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
+                for _, row in match_df.iterrows():
+                    code = safe_str(row.get(cfg.get('col_code', '')))
+                    if code: agents[code] = True
+            
             ranges = {
                 500000: (400000, 500000),
                 300000: (200000, 300000),
                 200000: (100000, 200000),
                 100000: (0, 100000)
             }
+            
+            counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
+            
+            if agents:
+                for code in agents.keys():
+                    calc_results, _ = calculate_agent_performance(code)
+                    for res in calc_results:
+                        if cat == "구간" and res['type'] != "구간": continue
+                        if cat == "브릿지" and "브릿지" not in res['type']: continue
+                        
+                        val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
+                        for t, (min_v, max_v) in ranges.items():
+                            if min_v <= val < max_v:
+                                counts[t] += 1
+                                break
+            
+            # 폴더 생성 및 표시
             for t, (min_v, max_v) in ranges.items():
-                if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만)", use_container_width=True, key=f"t_{t}"):
+                count = counts[t]
+                if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만) - 총 {count}명", use_container_width=True, key=f"t_{t}"):
                     st.session_state.mgr_step = 'list'
                     st.session_state.mgr_target = t
                     st.session_state.mgr_min_v = min_v
                     st.session_state.mgr_max_v = max_v
                     st.rerun()
                 
+        # 👥 [단계 3] 대상자 이름 명단 리스트 (지사명 + 이름 표기)
         elif step == 'list':
             if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'tiers'
@@ -425,12 +471,15 @@ if mode == "👥 매니저 관리":
                     for code, name, agency, val in near_agents:
                         # 🌟 명단 버튼에 [지사명] 이름 형식 적용 🌟
                         display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
+                        
+                        # 명단 버튼은 파란색 테두리 CSS를 위해 Primary 대신 기본 secondary에 css 입힘 (위 style 참조)
                         if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
                             st.session_state.mgr_selected_code = code
                             st.session_state.mgr_selected_name = f"[{agency}] {name}"
                             st.session_state.mgr_step = 'detail'
                             st.rerun()
 
+        # 👤 [단계 4] 특정 설계사 상세 정보 및 카톡 전송 화면
         elif step == 'detail':
             if st.button("⬅️ 명단으로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'list'
