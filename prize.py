@@ -34,7 +34,7 @@ def safe_str(val):
     if s.endswith('.0'): s = s[:-2]
     return s
 
-# --- 🎨 커스텀 CSS (버튼 색상 분리 및 모바일 최적화) ---
+# --- 🎨 커스텀 CSS (버튼 색상 분리, 누계 디자인 및 모바일 최적화) ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
@@ -54,11 +54,20 @@ st.markdown("""
 
     [data-testid="stForm"] { background-color: transparent; border: none; padding: 0; margin-bottom: 24px; }
 
+    /* 기본 구간 시책 요약 카드 (레드) */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
         box-shadow: 0 10px 25px rgba(128, 0, 0, 0.25);
     }
+    
+    /* 🌟 월간 누계 전용 요약 카드 (딥 네이비 파란색) 🌟 */
+    .cumulative-card { 
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+        border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
+        box-shadow: 0 10px 25px rgba(30, 60, 114, 0.25);
+    }
+    
     .summary-label { color: rgba(255,255,255,0.85); font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
     .summary-total { color: #ffffff; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; white-space: nowrap; word-break: keep-all; }
     .summary-item-name { color: rgba(255,255,255,0.95); font-size: 1.15rem; }
@@ -70,75 +79,55 @@ st.markdown("""
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
     }
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
-    .toss-desc { font-size: 1.15rem; color: rgb(128, 0, 0); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.3px; word-break: keep-all; }
+    
+    /* 시책 설명란 (설계사 화면) */
+    .toss-desc { font-size: 1.15rem; color: rgb(128, 0, 0); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.3px; line-height: 1.5; }
+    .toss-desc-cumul { font-size: 1.15rem; color: #2a5298; font-weight: 800; margin-bottom: 24px; letter-spacing: -0.3px; line-height: 1.5; }
     
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; flex-wrap: nowrap; }
     .data-label { color: #8b95a1; font-size: 1.1rem; word-break: keep-all; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
     
-    /* 🌟 상위 구간 부족 금액 강조 디자인 🌟 */
-    .shortfall-row {
-        background-color: #fff0f0; 
-        padding: 14px; 
-        border-radius: 12px; 
-        margin-top: 15px; 
-        margin-bottom: 5px;
-        border: 2px dashed #ff4b4b; 
-        text-align: center;
-    }
-    .shortfall-text {
-        color: #d9232e; 
-        font-size: 1.2rem; 
-        font-weight: 800; 
-        word-break: keep-all;
-    }
+    /* 상위 구간 부족 금액 강조 디자인 */
+    .shortfall-row { background-color: #fff0f0; padding: 14px; border-radius: 12px; margin-top: 15px; margin-bottom: 5px; border: 2px dashed #ff4b4b; text-align: center; }
+    .shortfall-text { color: #d9232e; font-size: 1.2rem; font-weight: 800; word-break: keep-all; }
 
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; flex-wrap: nowrap; }
-    .prize-label { color: #191f28; font-size: 1.3rem; font-weight: 700; word-break: keep-all; white-space: nowrap; }
+    .prize-label { color: #191f28; font-size: 1.3rem; font-weight: 700; word-break: keep-all; }
     .prize-value { color: rgb(128, 0, 0); font-size: 1.8rem; font-weight: 800; white-space: nowrap; text-align: right; } 
+    .prize-value-cumul { color: #2a5298; font-size: 1.8rem; font-weight: 800; white-space: nowrap; text-align: right; } 
     
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
-    
-    div[data-testid="stTextInput"] input {
-        font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
-        background-color: #ffffff !important; color: #191f28 !important;
-        border: 1px solid #e5e8eb !important; border-radius: 12px !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-    }
-    div[data-testid="stSelectbox"] > div {
-        background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important;
-    }
-    div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
-    
-    /* 🔴 메인 동작 버튼 (Primary) - 다크 레드 */
-    div.stButton > button[kind="primary"] {
-        font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
-        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
-        color: white !important; border: none !important; width: 100%; margin-top: 10px; margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2) !important;
-    }
-    
-    /* 📁 폴더 및 보조 버튼 (Secondary) - 연한 회색 & 검정 글씨 */
-    div.stButton > button[kind="secondary"] {
-        font-size: 1.2rem !important; font-weight: 700 !important; 
-        min-height: 60px !important; height: auto !important; padding: 10px !important;
-        border-radius: 12px !important; background-color: #e8eaed !important;
-        color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; 
-        margin-top: 5px; margin-bottom: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
-        white-space: normal !important; 
-    }
     
     @media (max-width: 450px) {
         .summary-total { font-size: 2.1rem !important; }
         .summary-label { font-size: 1.05rem !important; }
         .prize-label { font-size: 1.1rem !important; }
-        .prize-value { font-size: 1.45rem !important; }
+        .prize-value, .prize-value-cumul { font-size: 1.45rem !important; }
         .data-label { font-size: 1rem !important; }
         .data-value { font-size: 1.15rem !important; }
         .toss-title { font-size: 1.4rem !important; }
         .shortfall-text { font-size: 1.05rem !important; }
+    }
+    
+    div[data-testid="stTextInput"] input {
+        font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
+        background-color: #ffffff !important; color: #191f28 !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+    div[data-testid="stSelectbox"] > div { background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; }
+    div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
+    
+    /* 🔴 메인 동작 버튼 (Primary) */
+    div.stButton > button[kind="primary"] {
+        font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
+        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important; color: white !important; border: none !important; width: 100%; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2) !important;
+    }
+    
+    /* 📁 폴더 및 보조 버튼 (Secondary) */
+    div.stButton > button[kind="secondary"] {
+        font-size: 1.2rem !important; font-weight: 700 !important; min-height: 60px !important; height: auto !important; padding: 10px !important;
+        border-radius: 12px !important; background-color: #e8eaed !important; color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; margin-top: 5px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; white-space: normal !important; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -181,7 +170,6 @@ def calculate_agent_performance(target_code):
                         prize = (tier_prev + curr_req) * (calc_rate / 100)
                         break
                         
-            # 브릿지 1기간 당월 필수 달성 조건 남은 금액
             shortfall_curr = curr_req - val_curr if val_curr < curr_req else 0
                         
             calculated_results.append({
@@ -209,9 +197,8 @@ def calculate_agent_performance(target_code):
             if tier_achieved > 0:
                 prize = (tier_achieved + curr_req) * (calc_rate / 100)
                 
-            # 상위 구간 찾기 로직
             next_tier = None
-            for amt, rate in reversed(cfg['tiers']): # 오름차순으로 탐색
+            for amt, rate in reversed(cfg['tiers']):
                 if val_curr < amt:
                     next_tier = amt
                     break
@@ -221,6 +208,24 @@ def calculate_agent_performance(target_code):
                 "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
                 "val": val_curr, "tier": tier_achieved, "rate": calc_rate, "prize": prize, 
                 "curr_req": curr_req, "next_tier": next_tier, "shortfall": shortfall
+            })
+            total_prize_sum += prize
+
+        # 🌟 누계 데이터 처리 로직 🌟
+        elif "누계" in p_type:
+            col_val = cfg.get('col_val', '')
+            raw_val = match_df[col_val].values[0] if col_val and col_val in match_df.columns else 0
+            try: val = float(str(raw_val).replace(',', ''))
+            except: val = 0.0
+            
+            col_prize = cfg.get('col_prize', '')
+            raw_prize = match_df[col_prize].values[0] if col_prize and col_prize in match_df.columns else 0
+            try: prize = float(str(raw_prize).replace(',', ''))
+            except: prize = 0.0
+            
+            calculated_results.append({
+                "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "누계",
+                "val": val, "prize": prize
             })
             total_prize_sum += prize
 
@@ -237,9 +242,8 @@ def calculate_agent_performance(target_code):
                     prize = tier_achieved * (calc_rate / 100) 
                     break
                     
-            # 상위 구간 찾기 로직
             next_tier = None
-            for amt, rate in reversed(cfg['tiers']): # 오름차순으로 탐색
+            for amt, rate in reversed(cfg['tiers']):
                 if val < amt:
                     next_tier = amt
                     break
@@ -258,113 +262,159 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     """실적을 카드 형태로 예쁘게 출력하고, 카톡 복사용 텍스트를 제공합니다."""
     if len(calculated_results) == 0: return
 
-    summary_html = (
-        f"<div class='summary-card'>"
-        f"<div class='summary-label'>{user_name} 팀장님의 확보한 총 시상금</div>"
-        f"<div class='summary-total'>{total_prize_sum:,.0f}원</div>"
-        f"<div class='summary-divider'></div>"
-    )
+    normal_results = [r for r in calculated_results if r['type'] != '누계']
+    cumul_results = [r for r in calculated_results if r['type'] == '누계']
     
+    total_normal = sum(r['prize'] for r in normal_results)
+    total_cumul = sum(r['prize'] for r in cumul_results)
+
     share_text = f"🎯 [{user_name} 팀장님 실적 현황]\n"
-    share_text += f"💰 총 확보 시상금: {total_prize_sum:,.0f}원\n"
+    share_text += f"💰 총 합산 시상금: {total_prize_sum:,.0f}원\n"
     share_text += "────────────────\n"
-    
-    for res in calculated_results:
-        if res['type'] in ["구간", "브릿지1"]:
-            summary_html += (
+
+    # --- 🔴 1. 진행중인 구간/브릿지 시책 요약 및 렌더링 ---
+    if normal_results:
+        summary_html = (
+            f"<div class='summary-card'>"
+            f"<div class='summary-label'>{user_name} 팀장님의 진행 중인 시책 예상 시상</div>"
+            f"<div class='summary-total'>{total_normal:,.0f}원</div>"
+            f"<div class='summary-divider'></div>"
+        )
+        
+        share_text += f"📌 [진행 중인 시책]\n"
+        for res in normal_results:
+            if res['type'] in ["구간", "브릿지1"]:
+                summary_html += (
+                    f"<div class='data-row' style='padding: 6px 0;'>"
+                    f"<span class='summary-item-name'>{res['name']}</span>"
+                    f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
+                    f"</div>"
+                )
+                share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원\n"
+            else: 
+                # 🌟 요구사항 1: 줄바꿈 및 문구 변경 (다음 달 10만 가동 조건)
+                summary_html += (
+                    f"<div class='data-row' style='padding: 6px 0; align-items:flex-start;'>"
+                    f"<span class='summary-item-name'>{res['name']}<br><span style='font-size:0.95rem; color:rgba(255,255,255,0.7);'>(다음 달 {int(res['curr_req']//10000)}만 가동 조건)</span></span>"
+                    f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
+                    f"</div>"
+                )
+                share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (다음 달 {int(res['curr_req']//10000)}만 가동 조건)\n"
+                
+        summary_html += "</div>"
+        st.markdown(summary_html, unsafe_allow_html=True)
+        
+        # 개별 카드 렌더링
+        for res in normal_results:
+            desc_html = res['desc'].replace('\n', '<br>')
+            shortfall_html = ""
+            
+            if res.get('shortfall', 0) > 0 and res.get('next_tier'):
+                shortfall_html = f"<div class='shortfall-row'><span class='shortfall-text'>🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!</span></div>"
+            elif res.get('shortfall_curr', 0) > 0 and res.get('curr_req'):
+                shortfall_html = f"<div class='shortfall-row'><span class='shortfall-text'>🚨 당월 필수목표({int(res['curr_req']//10000)}만)까지 {res['shortfall_curr']:,.0f}원 부족!</span></div>"
+            
+            if res['type'] == "구간":
+                card_html = (
+                    f"<div class='toss-card'>"
+                    f"<div class='toss-title'>{res['name']}</div>"
+                    f"<div class='toss-desc'>{desc_html}</div>"
+                    f"<div class='data-row'><span class='data-label'>현재 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
+                    f"<div class='data-row'><span class='data-label'>도달한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
+                    f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                    f"{shortfall_html}"
+                    f"<div class='toss-divider'></div>"
+                    f"<div class='prize-row'>"
+                    f"<span class='prize-label'>확보한 시상금</span>"
+                    f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
+                    f"</div></div>"
+                )
+                share_text += f"\n[{res['name']}]\n- 현재실적: {res['val']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
+                if res.get('shortfall', 0) > 0: share_text += f"🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!\n"
+                
+            elif res['type'] == "브릿지1":
+                card_html = (
+                    f"<div class='toss-card'>"
+                    f"<div class='toss-title'>{res['name']}</div>"
+                    f"<div class='toss-desc'>{desc_html}</div>"
+                    f"<div class='data-row'>"
+                    f"<span class='data-label'>전월 실적 (인정구간)</span>"
+                    f"<div style='text-align:right;'>"
+                    f"<div class='data-value'>{res['val_prev']:,.0f}원</div>"
+                    f"<div class='sub-data'>({res['tier_prev']:,.0f}원 구간)</div>"
+                    f"</div></div>"
+                    f"<div class='data-row'>"
+                    f"<span class='data-label'>당월 실적 (목표 {res['curr_req']:,.0f}원)</span>"
+                    f"<span class='data-value'>{res['val_curr']:,.0f}원</span>"
+                    f"</div>"
+                    f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                    f"{shortfall_html}"
+                    f"<div class='toss-divider'></div>"
+                    f"<div class='prize-row'>"
+                    f"<span class='prize-label'>확보한 시상금</span>"
+                    f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
+                    f"</div></div>"
+                )
+                share_text += f"\n[{res['name']}]\n- 당월실적: {res['val_curr']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
+                if res.get('shortfall_curr', 0) > 0: share_text += f"🚨 당월 목표까지 {res['shortfall_curr']:,.0f}원 부족!\n"
+                
+            elif res['type'] == "브릿지2":
+                card_html = (
+                    f"<div class='toss-card'>"
+                    f"<div class='toss-title'>{res['name']}</div>"
+                    f"<div class='toss-desc'>{desc_html}</div>"
+                    f"<div class='data-row'><span class='data-label'>당월 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
+                    f"<div class='data-row'><span class='data-label'>확보한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
+                    f"<div class='data-row'><span class='data-label'>예상 적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                    f"{shortfall_html}"
+                    f"<div class='toss-divider'></div>"
+                    f"<div class='prize-row'>"
+                    f"<span class='prize-label'>다음 달 {int(res['curr_req']//10000)}만 가동 시<br>시상금</span>"
+                    f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
+                    f"</div></div>"
+                )
+                share_text += f"\n[{res['name']}]\n- 당월실적: {res['val']:,.0f}원\n- 예상시상: {res['prize']:,.0f}원 (다음 달 가동 조건)\n"
+                if res.get('shortfall', 0) > 0: share_text += f"🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!\n"
+                
+            st.markdown(card_html, unsafe_allow_html=True)
+
+    # --- 🔵 2. 월간 누계 시상금 요약 및 렌더링 (파란색 섹션) ---
+    if cumul_results:
+        cumul_html = (
+            f"<div class='cumulative-card'>"
+            f"<div class='summary-label'>{user_name} 팀장님의 월간 확정(누계) 시상</div>"
+            f"<div class='summary-total'>{total_cumul:,.0f}원</div>"
+            f"<div class='summary-divider'></div>"
+        )
+        
+        share_text += f"\n🏆 [월간 확정 누계 시상]\n"
+        for res in cumul_results:
+            cumul_html += (
                 f"<div class='data-row' style='padding: 6px 0;'>"
                 f"<span class='summary-item-name'>{res['name']}</span>"
                 f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
                 f"</div>"
             )
             share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원\n"
-        else: 
-            summary_html += (
-                f"<div class='data-row' style='padding: 6px 0;'>"
-                f"<span class='summary-item-name'>{res['name']} <span style='font-size:0.9rem; color:rgba(255,255,255,0.7);'>(차월 {int(res['curr_req']//10000)}만 조건)</span></span>"
-                f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
-                f"</div>"
-            )
-            share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (차월 {int(res['curr_req']//10000)}만 달성조건)\n"
-            
-    summary_html += "</div>"
-    st.markdown(summary_html, unsafe_allow_html=True)
-    
-    for res in calculated_results:
-        shortfall_html = ""
+        cumul_html += "</div>"
+        st.markdown(cumul_html, unsafe_allow_html=True)
         
-        # 🌟 상위 구간 남은 금액 HTML 생성 🌟
-        if res.get('shortfall', 0) > 0 and res.get('next_tier'):
-            shortfall_html = f"<div class='shortfall-row'><span class='shortfall-text'>🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!</span></div>"
-        elif res.get('shortfall_curr', 0) > 0 and res.get('curr_req'):
-            shortfall_html = f"<div class='shortfall-row'><span class='shortfall-text'>🚨 당월 필수목표({int(res['curr_req']//10000)}만)까지 {res['shortfall_curr']:,.0f}원 부족!</span></div>"
-        
-        if res['type'] == "구간":
+        for res in cumul_results:
+            desc_html = res['desc'].replace('\n', '<br>')
+            val_html = f"<div class='data-row'><span class='data-label'>해당 항목 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>" if res['val'] > 0 else ""
+            
             card_html = (
-                f"<div class='toss-card'>"
+                f"<div class='toss-card' style='border-left: 5px solid #2a5298;'>"
                 f"<div class='toss-title'>{res['name']}</div>"
-                f"<div class='toss-desc'>{res['desc']}</div>"
-                f"<div class='data-row'><span class='data-label'>현재 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
-                f"<div class='data-row'><span class='data-label'>도달한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
-                f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
-                f"{shortfall_html}"
+                f"<div class='toss-desc-cumul'>{desc_html}</div>"
+                f"{val_html}"
                 f"<div class='toss-divider'></div>"
                 f"<div class='prize-row'>"
-                f"<span class='prize-label'>확보한 시상금</span>"
-                f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
+                f"<span class='prize-label'>확정 누계 시상금</span>"
+                f"<span class='prize-value-cumul'>{res['prize']:,.0f}원</span>"
                 f"</div></div>"
             )
-            share_text += f"\n[{res['name']}]\n- 현재실적: {res['val']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
-            if res.get('shortfall', 0) > 0:
-                share_text += f"🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!\n"
-            
-        elif res['type'] == "브릿지1":
-            card_html = (
-                f"<div class='toss-card'>"
-                f"<div class='toss-title'>{res['name']}</div>"
-                f"<div class='toss-desc'>{res['desc']}</div>"
-                f"<div class='data-row'>"
-                f"<span class='data-label'>전월 실적 (인정구간)</span>"
-                f"<div style='text-align:right;'>"
-                f"<div class='data-value'>{res['val_prev']:,.0f}원</div>"
-                f"<div class='sub-data'>({res['tier_prev']:,.0f}원 구간)</div>"
-                f"</div></div>"
-                f"<div class='data-row'>"
-                f"<span class='data-label'>당월 실적 (목표 {res['curr_req']:,.0f}원)</span>"
-                f"<span class='data-value'>{res['val_curr']:,.0f}원</span>"
-                f"</div>"
-                f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
-                f"{shortfall_html}"
-                f"<div class='toss-divider'></div>"
-                f"<div class='prize-row'>"
-                f"<span class='prize-label'>확보한 시상금</span>"
-                f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
-                f"</div></div>"
-            )
-            share_text += f"\n[{res['name']}]\n- 당월실적: {res['val_curr']:,.0f}원\n- 확보금액: {res['prize']:,.0f}원\n"
-            if res.get('shortfall_curr', 0) > 0:
-                share_text += f"🚨 당월 목표까지 {res['shortfall_curr']:,.0f}원 부족!\n"
-            
-        elif res['type'] == "브릿지2":
-            card_html = (
-                f"<div class='toss-card'>"
-                f"<div class='toss-title'>{res['name']}</div>"
-                f"<div class='toss-desc'>{res['desc']}</div>"
-                f"<div class='data-row'><span class='data-label'>당월 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
-                f"<div class='data-row'><span class='data-label'>확보한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
-                f"<div class='data-row'><span class='data-label'>예상 적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
-                f"{shortfall_html}"
-                f"<div class='toss-divider'></div>"
-                f"<div class='prize-row'>"
-                f"<span class='prize-label'>차월 {int(res['curr_req']//10000)}만원 달성시 시상금</span>"
-                f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
-                f"</div></div>"
-            )
-            share_text += f"\n[{res['name']}]\n- 당월실적: {res['val']:,.0f}원\n- 확보예정: {res['prize']:,.0f}원 (차월조건)\n"
-            if res.get('shortfall', 0) > 0:
-                share_text += f"🚀 다음 {int(res['next_tier']//10000)}만 구간까지 {res['shortfall']:,.0f}원 남음!\n"
-            
-        st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown(card_html, unsafe_allow_html=True)
 
     if show_share_text:
         st.markdown("<h4 style='color:#191f28; font-weight:700; margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
@@ -440,7 +490,6 @@ if mode == "👥 매니저 관리":
                 200000: (100000, 200000),
                 100000: (0, 100000)
             }
-            
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
             if agents:
@@ -449,6 +498,7 @@ if mode == "👥 매니저 관리":
                     for res in calc_results:
                         if cat == "구간" and res['type'] != "구간": continue
                         if cat == "브릿지" and "브릿지" not in res['type']: continue
+                        if res['type'] == "누계": continue
                         
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
                         for t, (min_v, max_v) in ranges.items():
@@ -490,11 +540,8 @@ if mode == "👥 매니저 관리":
                     code = safe_str(row.get(cfg.get('col_code', '')))
                     name = safe_str(row.get(cfg.get('col_name', '')))
                     agency = safe_str(row.get(cfg.get('col_agency', '')))
-                    if not agency: 
-                        agency = safe_str(row.get(cfg.get('col_branch', '')))
-                    
-                    if code and name: 
-                        agents[code] = {"name": name, "agency": agency}
+                    if not agency: agency = safe_str(row.get(cfg.get('col_branch', '')))
+                    if code and name: agents[code] = {"name": name, "agency": agency}
             
             if not agents:
                 st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.")
@@ -508,6 +555,7 @@ if mode == "👥 매니저 관리":
                     for res in calc_results:
                         if cat == "구간" and res['type'] != "구간": continue
                         if cat == "브릿지" and "브릿지" not in res['type']: continue
+                        if res['type'] == "누계": continue
                         
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
                         if min_v <= val < max_v:
@@ -518,7 +566,6 @@ if mode == "👥 매니저 관리":
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
                     near_agents.sort(key=lambda x: (x[2], x[1]))
-                    
                     for code, name, agency, val in near_agents:
                         display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
                         if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
@@ -540,7 +587,6 @@ if mode == "👥 매니저 관리":
             st.markdown(f"<h4 style='color:#3182f6; font-weight:800; font-size:1.5rem; margin-top:0; text-align:center;'>👤 {name} 설계사님 ({cat} 상세)</h4>", unsafe_allow_html=True)
             
             calc_results, total_prize = calculate_agent_performance(code)
-            
             render_ui_cards(name, calc_results, total_prize, show_share_text=True)
             
             user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
@@ -630,7 +676,7 @@ elif mode == "⚙️ 시스템 관리자":
                     "name": f"신규 시책 {len(st.session_state['config'])+1}",
                     "desc": "", "type": "구간 시책", 
                     "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", "col_manager": "",
-                    "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
+                    "col_val": "", "col_val_prev": "", "col_val_curr": "", "col_prize": "", "curr_req": 100000.0,
                     "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
                 })
                 st.rerun()
@@ -654,6 +700,7 @@ elif mode == "⚙️ 시스템 관리자":
         if 'col_manager' not in cfg: cfg['col_manager'] = ""
         if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
         if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
+        if 'col_prize' not in cfg: cfg['col_prize'] = ""
         if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
 
         st.divider()
@@ -669,13 +716,17 @@ elif mode == "⚙️ 시스템 관리자":
                 st.rerun()
         
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
-        cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
+        
+        # 🌟 요구사항 2: 시책 설명란 다중 줄바꿈 지원 🌟
+        cfg['desc'] = st.text_area("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용\n(엔터를 쳐서 문단을 나눌 수 있습니다)", key=f"desc_{i}", height=100)
         
         idx = 0
         if "1기간" in cfg['type']: idx = 1
         elif "2기간" in cfg['type']: idx = 2
+        elif "누계" in cfg['type']: idx = 3
             
-        cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 달성 조건)"], 
+        # 🌟 요구사항 3: 누계 시상 항목 라디오 버튼 추가 🌟
+        cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 달성 조건)", "월간 누계 (확정 시상 불러오기)"], 
                                index=idx, horizontal=True, key=f"type_{i}")
         
         col1, col2 = st.columns(2)
@@ -704,25 +755,30 @@ elif mode == "⚙️ 시스템 관리자":
                 col_key = 'col_val_curr'
                 cfg[col_key] = st.selectbox("당월 실적 수치 컬럼", cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
                 cfg['curr_req'] = st.number_input("차월 필수 달성 조건 금액 (합산용)", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
+            elif "누계" in cfg['type']:
+                cfg['col_val'] = st.selectbox("해당 항목 실적 컬럼 (선택사항, 금액이 없으면 성명 컬럼 지정)", cols, index=get_idx(cfg.get('col_val', ''), cols), key=f"cval_{i}")
+                cfg['col_prize'] = st.selectbox("해당 항목 확정 시상금(금액) 컬럼", cols, index=get_idx(cfg.get('col_prize', ''), cols), key=f"cprize_{i}")
             else: 
                 col_key = 'col_val'
                 cfg[col_key] = st.selectbox("실적 수치 컬럼", cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
 
         with col2:
             if "1기간" in cfg['type']: st.write("📈 전월 구간 설정 (전월구간금액,지급률%)")
+            elif "누계" in cfg['type']: st.write("✅ 누계 확정 항목은 구간 설정이 필요 없습니다.")
             else: st.write("📈 당월 구간 설정 (달성구간금액,지급률%)")
-                
-            tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
-            tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
-            try:
-                new_tiers = []
-                for line in tier_input.strip().split('\n'):
-                    if ',' in line:
-                        parts = line.split(',')
-                        new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
-                cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
-            except:
-                st.error("형식이 올바르지 않습니다.")
+            
+            if "누계" not in cfg['type']:
+                tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
+                tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
+                try:
+                    new_tiers = []
+                    for line in tier_input.strip().split('\n'):
+                        if ',' in line:
+                            parts = line.split(',')
+                            new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
+                    cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
+                except:
+                    st.error("형식이 올바르지 않습니다.")
 
     st.divider()
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🖼️ 3. 안내 리플렛(이미지) 등록</h3>", unsafe_allow_html=True)
