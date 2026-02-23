@@ -27,7 +27,7 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
+# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 모바일 반응형 최적화) ---
 st.markdown("""
 <style>
     /* 전체 배경을 밝은 회색으로 고정 */
@@ -46,7 +46,7 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
-    /* 🌟 메리츠 레드 타이틀 띠지 🌟 */
+    /* 메리츠 레드 타이틀 띠지 */
     .title-band {
         background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
         text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
@@ -65,9 +65,11 @@ st.markdown("""
         box-shadow: 0 10px 25px rgba(128, 0, 0, 0.25);
     }
     .summary-label { color: rgba(255,255,255,0.85); font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
-    .summary-total { color: #ffffff; font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; }
+    
+    /* 🌟 줄바꿈 방지 (white-space: nowrap) 추가 🌟 */
+    .summary-total { color: #ffffff; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; white-space: nowrap; word-break: keep-all; }
     .summary-item-name { color: rgba(255,255,255,0.95); font-size: 1.15rem; }
-    .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
+    .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; white-space: nowrap; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
     /* 개별 시책 상세 카드 */
@@ -76,25 +78,34 @@ st.markdown("""
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
     }
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
-    
-    /* 🌟 사용자 화면: 시책 설명 텍스트를 메리츠 다크 레드로 변경 🌟 */
-    .toss-desc { font-size: 1.15rem; color: rgb(128, 0, 0); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.3px; }
+    .toss-desc { font-size: 1.15rem; color: rgb(128, 0, 0); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.3px; word-break: keep-all; }
     
     /* 데이터 행 */
-    .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
-    .data-label { color: #8b95a1; font-size: 1.1rem; }
-    .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
+    .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; flex-wrap: nowrap; }
+    .data-label { color: #8b95a1; font-size: 1.1rem; word-break: keep-all; }
+    .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
     
     /* 시상금 강조 행 */
-    .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
-    .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
-    .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
+    .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; flex-wrap: nowrap; }
+    .prize-label { color: #191f28; font-size: 1.3rem; font-weight: 700; word-break: keep-all; white-space: nowrap; }
+    .prize-value { color: rgb(128, 0, 0); font-size: 1.8rem; font-weight: 800; white-space: nowrap; text-align: right; } 
+    
+    /* 🌟 카카오톡 인앱 브라우저 등 작은 화면(모바일) 대응 반응형 코드 🌟 */
+    @media (max-width: 450px) {
+        .summary-total { font-size: 2.1rem !important; }
+        .summary-label { font-size: 1.05rem !important; }
+        .prize-label { font-size: 1.1rem !important; }
+        .prize-value { font-size: 1.45rem !important; }
+        .data-label { font-size: 1rem !important; }
+        .data-value { font-size: 1.15rem !important; }
+        .toss-title { font-size: 1.4rem !important; }
+    }
     
     /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 🌟 시니어 입력창 확대 및 메리츠 컬러 버튼 🌟 */
+    /* 시니어 입력창 확대 및 메리츠 컬러 버튼 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important;
@@ -355,7 +366,8 @@ else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     
-    # 🌟 백그라운드를 그리는 HTML 태그를 모두 삭제하여 빈 하얀 박스 버그 완벽 제거 🌟
+    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
+    
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
 
@@ -399,6 +411,7 @@ else:
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not user_name or not branch_code_input:
@@ -570,6 +583,7 @@ else:
                         )
                     st.markdown(card_html, unsafe_allow_html=True)
                 
+                # 🌟 등록된 리플렛 이미지 띄우기 🌟
                 user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
                 if os.path.exists(user_leaflet_path):
                     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
