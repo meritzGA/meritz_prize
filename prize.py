@@ -404,6 +404,7 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
+                # 사용자가 콤보박스에서 설계사 코드를 선택한 경우 데이터 필터링
                 if needs_disambiguation and selected_code and 'col_code' in cfg and cfg['col_code']:
                     match_df = match_df[match_df[cfg['col_code']].fillna('').astype(str).str.strip() == selected_code]
                 
@@ -463,17 +464,22 @@ else:
                     try: val_curr = float(str(raw_curr).replace(',', ''))
                     except: val_curr = 0.0
                     
-                    calc_rate, tier_achieved = 0, 0
+                    calc_rate, tier_achieved, prize = 0, 0, 0
                     for amt, rate in cfg['tiers']:
                         if val_curr >= amt:
                             tier_achieved = amt
                             calc_rate = rate
                             break
+                            
+                    # 🌟 브릿지 2기간: 차월 10만원(100000) 달성 가정한 확보 시상금 계산 🌟
+                    if tier_achieved > 0:
+                        prize = (tier_achieved + 100000) * (calc_rate / 100)
                     
                     calculated_results.append({
                         "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
-                        "val": val_curr, "tier": tier_achieved, "rate": calc_rate
+                        "val": val_curr, "tier": tier_achieved, "rate": calc_rate, "prize": prize
                     })
+                    total_prize_sum += prize
 
             # 안전한 문자열 묶음 방식 처리
             if len(calculated_results) > 0:
@@ -495,8 +501,8 @@ else:
                     else: 
                         summary_html += (
                             f"<div class='data-row' style='padding: 6px 0;'>"
-                            f"<span class='summary-item-name'>{res['name']}</span>"
-                            f"<span class='summary-item-val' style='color:rgba(255,255,255,0.7);'>{res['tier']:,.0f}원 구간 확보</span>"
+                            f"<span class='summary-item-name'>{res['name']} <span style='font-size:0.9rem; color:rgba(255,255,255,0.7);'>(차월 10만 달성조건)</span></span>"
+                            f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
                             f"</div>"
                         )
                 summary_html += "</div>"
@@ -545,11 +551,12 @@ else:
                             f"<div class='toss-title'>{res['name']}</div>"
                             f"<div class='toss-desc'>{res['desc']}</div>"
                             f"<div class='data-row'><span class='data-label'>당월 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
-                            f"<div class='data-row'><span class='data-label'>예상 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                            f"<div class='data-row'><span class='data-label'>확보한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
+                            f"<div class='data-row'><span class='data-label'>예상 적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
                             f"<div class='toss-divider'></div>"
                             f"<div class='prize-row'>"
-                            f"<span class='prize-label'>차월 확보한 브릿지 구간</span>"
-                            f"<span class='prize-value'>{res['tier']:,.0f}원</span>"
+                            f"<span class='prize-label'>차월 10만원 달성시 시상금</span>"
+                            f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
                             f"</div></div>"
                         )
                     st.markdown(card_html, unsafe_allow_html=True)
