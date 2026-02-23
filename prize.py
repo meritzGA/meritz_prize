@@ -280,17 +280,21 @@ if mode == "⚙️ 시스템 관리자 모드":
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
             
-            if "구간" in cfg['type'] or "2기간" in cfg['type']:
-                col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
-                label = "당월 실적 수치 컬럼" if "2기간" in cfg['type'] else "실적 수치 컬럼"
-                cfg[col_key] = st.selectbox(label, cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
+            # 🌟 브릿지 2기간 선택 시, 차월 10만원 등 합산 조건을 직접 입력할 수 있도록 수정 🌟
+            if "구간" in cfg['type']:
+                col_key = 'col_val'
+                cfg[col_key] = st.selectbox("실적 수치 컬럼", cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
+            elif "2기간" in cfg['type']:
+                col_key = 'col_val_curr'
+                cfg[col_key] = st.selectbox("당월 실적 수치 컬럼", cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
+                cfg['curr_req'] = st.number_input("차월 필수 달성 조건 금액 (합산용)", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
             else: 
                 cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
                 cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
-                cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
+                cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
 
         with col2:
-            if "구간" in cfg['type'] or "2기간" in cfg['type']: st.write("📈 구간 설정 (달성구간금액,지급률%)")
+            if "구간" in cfg['type'] or "2기간" in cfg['type']: st.write("📈 당월 구간 설정 (달성구간금액,지급률%)")
             else: st.write("📈 전월 구간 설정 (전월구간금액,지급률%)")
                 
             tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
@@ -404,7 +408,6 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                # 사용자가 콤보박스에서 설계사 코드를 선택한 경우 데이터 필터링
                 if needs_disambiguation and selected_code and 'col_code' in cfg and cfg['col_code']:
                     match_df = match_df[match_df[cfg['col_code']].fillna('').astype(str).str.strip() == selected_code]
                 
@@ -440,7 +443,7 @@ else:
                     try: val_curr = float(str(raw_curr).replace(',', ''))
                     except: val_curr = 0.0
                     
-                    curr_req = float(cfg['curr_req'])
+                    curr_req = float(cfg.get('curr_req', 100000.0))
                     calc_rate, tier_prev, prize = 0, 0, 0
                     
                     if val_curr >= curr_req:
@@ -464,24 +467,26 @@ else:
                     try: val_curr = float(str(raw_curr).replace(',', ''))
                     except: val_curr = 0.0
                     
+                    curr_req = float(cfg.get('curr_req', 100000.0))
                     calc_rate, tier_achieved, prize = 0, 0, 0
+                    
                     for amt, rate in cfg['tiers']:
                         if val_curr >= amt:
                             tier_achieved = amt
                             calc_rate = rate
                             break
                             
-                    # 🌟 브릿지 2기간: 차월 10만원(100000) 달성 가정한 확보 시상금 계산 🌟
+                    # 브릿지 2기간: 차월 필수조건(10만원) 합산 시상금 계산
                     if tier_achieved > 0:
-                        prize = (tier_achieved + 100000) * (calc_rate / 100)
+                        prize = (tier_achieved + curr_req) * (calc_rate / 100)
                     
                     calculated_results.append({
                         "name": cfg['name'], "desc": cfg.get('desc', ''), "type": "브릿지2",
-                        "val": val_curr, "tier": tier_achieved, "rate": calc_rate, "prize": prize
+                        "val": val_curr, "tier": tier_achieved, "rate": calc_rate, "prize": prize, "curr_req": curr_req
                     })
                     total_prize_sum += prize
 
-            # 안전한 문자열 묶음 방식 처리
+            # 안전한 문자열 묶음 방식 처리 (들여쓰기 에러 방지)
             if len(calculated_results) > 0:
                 summary_html = (
                     f"<div class='summary-card'>"
@@ -501,7 +506,7 @@ else:
                     else: 
                         summary_html += (
                             f"<div class='data-row' style='padding: 6px 0;'>"
-                            f"<span class='summary-item-name'>{res['name']} <span style='font-size:0.9rem; color:rgba(255,255,255,0.7);'>(차월 10만 달성조건)</span></span>"
+                            f"<span class='summary-item-name'>{res['name']} <span style='font-size:0.9rem; color:rgba(255,255,255,0.7);'>(차월 {int(res['curr_req']//10000)}만 달성조건)</span></span>"
                             f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
                             f"</div>"
                         )
@@ -555,7 +560,7 @@ else:
                             f"<div class='data-row'><span class='data-label'>예상 적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
                             f"<div class='toss-divider'></div>"
                             f"<div class='prize-row'>"
-                            f"<span class='prize-label'>차월 10만원 달성시 시상금</span>"
+                            f"<span class='prize-label'>차월 {int(res['curr_req']//10000)}만원 달성시 시상금</span>"
                             f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
                             f"</div></div>"
                         )
