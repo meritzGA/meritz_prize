@@ -1,14 +1,18 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import os
 import json
 
+# 페이지 설정 (사이드바 제거)
 st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide")
 
+# --- 데이터 영구 저장을 위한 폴더 설정 ---
 DATA_DIR = "app_data"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
+# 데이터 불러오기 로직
 if 'raw_data' not in st.session_state:
     st.session_state['raw_data'] = {}
     for file in os.listdir(DATA_DIR):
@@ -23,41 +27,82 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# --- CSS 설정 (하얀 빈 박스 버그 완벽 제거 및 메리츠 컬러) ---
+# --- 🎨 커스텀 CSS (하얀 빈 박스 버그 유발 요소 완전 제거) ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
-    div[data-testid="stRadio"] > div { display: flex; justify-content: center; background-color: #ffffff; padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb; }
-    .title-band { background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800; text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px; letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2); }
+    
+    div[data-testid="stRadio"] > div { 
+        display: flex; justify-content: center; background-color: #ffffff; 
+        padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb; 
+    }
+    
+    .title-band {
+        background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
+        text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
+        letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
+    }
+
     [data-testid="stForm"] { background-color: transparent; border: none; padding: 0; margin-bottom: 24px; }
-    .summary-card { background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none; box-shadow: 0 10px 25px rgba(128, 0, 0, 0.25); }
+
+    .summary-card { 
+        background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
+        border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
+        box-shadow: 0 10px 25px rgba(128, 0, 0, 0.25);
+    }
     .summary-label { color: rgba(255,255,255,0.85); font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
     .summary-total { color: #ffffff; font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; }
     .summary-item-name { color: rgba(255,255,255,0.95); font-size: 1.15rem; }
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
-    .toss-card { background: #ffffff; border-radius: 20px; padding: 28px 24px; margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+    
+    .toss-card { 
+        background: #ffffff; border-radius: 20px; padding: 28px 24px; 
+        margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
+    }
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
     .toss-desc { font-size: 1.15rem; color: rgb(128, 0, 0); font-weight: 800; margin-bottom: 24px; letter-spacing: -0.3px; }
+    
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
     .data-label { color: #8b95a1; font-size: 1.1rem; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
+    
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
     .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
+    
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
-    div[data-testid="stTextInput"] input { font-size: 1.3rem !important; padding: 15px !important; height: 55px !important; background-color: #ffffff !important; color: #191f28 !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
-    div[data-testid="stSelectbox"] > div { background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; }
+    
+    div[data-testid="stTextInput"] input {
+        font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
+        background-color: #ffffff !important; color: #191f28 !important;
+        border: 1px solid #e5e8eb !important; border-radius: 12px !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+    div[data-testid="stSelectbox"] > div {
+        background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important;
+    }
     div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
-    div.stButton > button { font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important; border-radius: 12px !important; background-color: rgb(128, 0, 0) !important; color: white !important; border: none !important; width: 100%; margin-top: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2); }
-    .del-btn-container button { background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important; height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important; }
+    
+    div.stButton > button {
+        font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
+        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
+        color: white !important; border: none !important; width: 100%; margin-top: 15px; margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
+    }
+    
+    .del-btn-container button {
+        background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
+        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 📱 1. 최상단: 3가지 메뉴 탭
+# 📱 1. 최상단: 메뉴 선택 탭
 # ==========================================
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 관리자 모드"], horizontal=True, label_visibility="collapsed")
 
@@ -66,6 +111,7 @@ mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관�
 # ==========================================
 if mode == "⚙️ 관리자 모드":
     st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:1.8rem; margin-top: 20px;'>관리자 설정</h2>", unsafe_allow_html=True)
+    
     admin_pw = st.text_input("관리자 비밀번호를 입력하세요", type="password")
     if admin_pw != "meritz0085":
         if admin_pw: st.error("비밀번호가 일치하지 않습니다.")
@@ -73,6 +119,9 @@ if mode == "⚙️ 관리자 모드":
         
     st.success("인증 성공! 변경 사항은 가장 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
+    # ---------------------------------------------------------
+    # [영역 1] 파일 업로드
+    # ---------------------------------------------------------
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
     
@@ -99,7 +148,8 @@ if mode == "⚙️ 관리자 모드":
             st.success("✅ 파일 업로드 완료")
             st.rerun()
 
-    st.markdown("<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-bottom:20px;'>", unsafe_allow_html=True)
+    # 하얀 빈 박스 방지를 위해 raw HTML 컨테이너 삭제, Streamlit 레이아웃 활용
+    st.markdown("<br>", unsafe_allow_html=True)
     col1, col2 = st.columns([7, 3])
     with col1: st.markdown(f"**현재 저장된 파일 ({len(st.session_state['raw_data'])}개)**")
     with col2:
@@ -113,7 +163,7 @@ if mode == "⚙️ 관리자 모드":
         
     st.divider()
     if not st.session_state['raw_data']:
-        st.info("현재 업로드된 파일이 없습니다.")
+        st.info("현재 업로드된 파일이 없습니다. 위에 파일을 추가해주세요.")
     else:
         for file_name in list(st.session_state['raw_data'].keys()):
             col_name, col_btn = st.columns([8, 2])
@@ -126,19 +176,22 @@ if mode == "⚙️ 관리자 모드":
                     if os.path.exists(pkl_path): os.remove(pkl_path)
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin:10px 0; opacity:0.3;'>", unsafe_allow_html=True)
 
+    # ---------------------------------------------------------
+    # [영역 2] 시책 항목 관리
+    # ---------------------------------------------------------
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
     col_add, col_del_all = st.columns(2)
     with col_add:
         st.markdown('<style>div.row-widget.stButton > button[kind="primary"] { background-color: #3182f6 !important; }</style>', unsafe_allow_html=True)
         if st.button("➕ 신규 시상 항목 추가", type="primary", use_container_width=True):
-            if not st.session_state['raw_data']: st.error("⚠️ 파일을 업로드해주세요.")
+            if not st.session_state['raw_data']: st.error("⚠️ 파일을 먼저 업로드해주세요.")
             else:
                 first_file = list(st.session_state['raw_data'].keys())[0]
                 st.session_state['config'].append({
                     "name": f"신규 시책 {len(st.session_state['config'])+1}", "desc": "", "type": "구간 시책", "file": first_file, 
-                    "col_name": "", "col_code": "", "col_branch": "", "col_manager_name": "", "col_manager_code": "",
+                    "col_name": "", "col_code": "", "col_branch": "", "col_manager_code": "",
                     "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0, "tiers": [(100000, 100), (200000, 200)]
                 })
                 st.rerun()
@@ -153,17 +206,16 @@ if mode == "⚙️ 관리자 모드":
         st.markdown('</div>', unsafe_allow_html=True)
 
     for i, cfg in enumerate(st.session_state['config']):
-        # 기본값 세팅
-        for k in ['desc','col_code','col_branch','col_manager_name','col_manager_code','col_val_prev','col_val_curr']:
+        for k in ['desc','col_code','col_branch','col_manager_code','col_val_prev','col_val_curr']:
             if k not in cfg: cfg[k] = ""
         if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
 
-        st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-top:20px;'>", unsafe_allow_html=True)
+        st.divider()
         c_title, c_del = st.columns([8, 2])
         with c_title: st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin:0;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
         with c_del:
             st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
-            if st.button("삭제", key=f"del_cfg_{i}", use_container_width=True):
+            if st.button("개별 삭제", key=f"del_cfg_{i}", use_container_width=True):
                 st.session_state['config'].pop(i)
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
@@ -188,7 +240,8 @@ if mode == "⚙️ 관리자 모드":
             cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
-            cfg['col_manager_name'] = st.selectbox("지원매니저명 컬럼", cols, index=get_idx(cfg['col_manager_name'], cols), key=f"cmgrname_{i}")
+            
+            # 🌟 관리자 화면에서 지원매니저코드만 받도록 수정 🌟
             cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg['col_manager_code'], cols), key=f"cmgrcode_{i}")
             
             if "1기간" in cfg['type']:
@@ -213,7 +266,6 @@ if mode == "⚙️ 관리자 모드":
                         new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
                 cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
             except: st.error("형식이 올바르지 않습니다.")
-        st.markdown("</div>", unsafe_allow_html=True) 
 
     st.divider()
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🖼️ 3. 안내 리플렛(이미지) 등록</h3>", unsafe_allow_html=True)
@@ -246,32 +298,28 @@ if mode == "⚙️ 관리자 모드":
 # ==========================================
 elif mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 산하 근접자 조회</div>', unsafe_allow_html=True)
-    st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>매니저 이름과 코드를 입력하세요.</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>지원매니저 코드(사번)를 입력하세요.</h3>", unsafe_allow_html=True)
     
-    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
-    manager_name = st.text_input("매니저 이름", placeholder="예: 김매니저")
+    # 🌟 하얀 빈 박스 방지를 위해 순수 Streamlit UI만 배치 (이름 생략, 코드만 입력) 🌟
     manager_code = st.text_input("매니저 코드(사번)", placeholder="예: 123456")
     submit_manager = st.button("산하 근접자 확인하기")
-    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit_manager:
-        if not manager_name or not manager_code:
-            st.warning("매니저 이름과 코드를 모두 입력해주세요.")
+        if not manager_code:
+            st.warning("매니저 코드를 입력해주세요.")
         elif not st.session_state['config']:
             st.warning("진행 중인 시책이 없습니다.")
         else:
             has_data = False
             for i, cfg in enumerate(st.session_state['config']):
-                if not cfg.get('col_manager_name') or not cfg.get('col_manager_code'):
+                if not cfg.get('col_manager_code'):
                     continue
                     
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is not None:
-                    # 매니저명 + 매니저코드 동시 일치 검사
-                    search_mgr_name = df[cfg['col_manager_name']].fillna('').astype(str).str.strip()
+                    # 매니저코드 단일 조건으로 매칭 (고유값이므로 중복 없음)
                     search_mgr_code = df[cfg['col_manager_code']].fillna('').astype(str).str.strip()
-                    
-                    match_df = df[(search_mgr_name == manager_name.strip()) & (search_mgr_code == manager_code.strip())]
+                    match_df = df[search_mgr_code == manager_code.strip()]
                     
                     if not match_df.empty:
                         has_data = True
@@ -318,7 +366,7 @@ elif mode == "👥 매니저 관리":
                             st.info("산하 설계사 모두 최고 구간을 달성했습니다.")
                             
             if not has_data:
-                st.error("일치하는 정보가 없거나, 관리자 설정에서 '지원매니저명/코드 컬럼'이 지정되지 않았습니다.")
+                st.error("일치하는 정보가 없거나, 관리자 설정에서 '지원매니저코드 컬럼'이 지정되지 않았습니다.")
 
 # ==========================================
 # 📊 4. 사용자 모드 (설계사 실적 조회)
@@ -327,7 +375,7 @@ elif mode == "📊 내 실적 조회":
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     
-    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
+    # 🌟 하얀 빈 박스 방지를 위해 순수 Streamlit UI만 배치 🌟
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
 
@@ -366,7 +414,6 @@ elif mode == "📊 내 실적 조회":
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
-    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not user_name or not branch_code_input: st.warning("이름과 지점코드를 입력해주세요.")
