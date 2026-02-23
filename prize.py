@@ -4,7 +4,7 @@ import numpy as np
 import os
 import json
 
-# 페이지 설정
+# 페이지 설정 (사이드바 제거)
 st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide")
 
 # --- 데이터 영구 저장을 위한 폴더 설정 ---
@@ -295,12 +295,12 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum):
 
 
 # ==========================================
-# 📱 1. 최상단: 메뉴 선택 탭
+# 📱 1. 최상단: 메뉴 선택 탭 (이름 정확히 매칭)
 # ==========================================
-mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리"], horizontal=True, label_visibility="collapsed")
+mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 (신규)
+# 👥 2. 매니저 관리 페이지 
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -373,7 +373,6 @@ if mode == "👥 매니저 관리":
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem;'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
             st.info("💡 아래 화면을 캡처(스크린샷)하여 대상 설계사에게 공유해주세요.")
             
-            # 매니저 소속 설계사 찾기
             agents = {}
             for cfg in st.session_state['config']:
                 mgr_col = cfg.get('col_manager', '')
@@ -381,7 +380,6 @@ if mode == "👥 매니저 관리":
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None: continue
                 
-                # 매니저 코드로 필터링
                 match_df = df[df[mgr_col].fillna('').astype(str).str.strip() == st.session_state.mgr_code.strip()]
                 for _, row in match_df.iterrows():
                     code = str(row[cfg.get('col_code', '')]).strip()
@@ -695,4 +693,4 @@ else:
                     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
                     st.image(user_leaflet_path, use_container_width=True)
             else:
-                st.error("실적 데이터를 계산할 수 없습니다.")
+                st.error("해당 조건의 실적 데이터가 없습니다.")
