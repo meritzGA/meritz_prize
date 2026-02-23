@@ -474,18 +474,12 @@ if mode == "👥 매니저 관리":
     if 'mgr_logged_in' not in st.session_state: st.session_state.mgr_logged_in = False
     
     if not st.session_state.mgr_logged_in:
-        # 로그인 폼
-        with st.form("mgr_login_form"):
-            mgr_input = st.text_input("지원매니저 사번(코드) 또는 이름을 입력하세요", type="password", placeholder="예: 12345")
-            submit = st.form_submit_button("로그인", type="primary")
-            if submit:
-                if mgr_input:
-                    st.session_state.mgr_logged_in = True
-                    st.session_state.mgr_code = safe_str(mgr_input) # 안전하게 문자열 변환 저장
-                    st.session_state.mgr_step = 'main'
-                    st.rerun()
-                else:
-                    st.error("코드를 입력해주세요.")
+        mgr_code = st.text_input("지원매니저 사번(코드) 또는 이름을 입력하세요", type="password", placeholder="예: 12345 또는 홍길동")
+        if st.button("로그인", type="primary"):
+            st.session_state.mgr_logged_in = True
+            st.session_state.mgr_code = mgr_code
+            st.session_state.mgr_step = 'main'
+            st.rerun()
     else:
         if st.button("🚪 로그아웃"):
             st.session_state.mgr_logged_in = False
@@ -495,7 +489,7 @@ if mode == "👥 매니저 관리":
         step = st.session_state.get('mgr_step', 'main')
         
         if step == 'main':
-            st.markdown("<h3 class='main-title'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("📁 구간실적 관리", use_container_width=True):
@@ -509,14 +503,13 @@ if mode == "👥 매니저 관리":
                     st.rerun()
                 
         elif step == 'tiers':
-            if st.button("⬅️ 뒤로가기"):
+            if st.button("⬅️ 뒤로가기", use_container_width=False):
                 st.session_state.mgr_step = 'main'
                 st.rerun()
             
             cat = st.session_state.mgr_category
-            st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 1. 매니저 소속 설계사 명단 먼저 추출 (정확한 매칭을 위해 safe_str 적용)
             agents = {}
             for cfg in st.session_state['config']:
                 mgr_col = cfg.get('col_manager', '')
@@ -524,48 +517,125 @@ if mode == "👥 매니저 관리":
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None: continue
                 
-                # 데이터프레임의 매니저 컬럼과 입력값을 모두 safe_str 처리하여 비교
-                match_df = df[df[mgr_col].apply(safe_str) == st.session_state.mgr_code]
-                
+                match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
                 for _, row in match_df.iterrows():
                     code = safe_str(row.get(cfg.get('col_code', '')))
                     if code: agents[code] = True
             
-            # 2. 구간별 카운트 계산
             ranges = {
                 500000: (400000, 500000),
                 300000: (200000, 300000),
                 200000: (100000, 200000),
                 100000: (0, 100000)
             }
+            
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
             if agents:
                 for code in agents.keys():
                     calc_results, _ = calculate_agent_performance(code)
                     for res in calc_results:
-                        # 카테고리 필터링 (구간 vs 브릿지)
                         if cat == "구간" and res['type'] != "구간": continue
                         if cat == "브릿지" and "브릿지" not in res['type']: continue
-                        if res['category'] == 'cumulative': continue
                         
-                        val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr', 0)
-                        
+                        val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
                         for t, (min_v, max_v) in ranges.items():
                             if min_v <= val < max_v:
                                 counts[t] += 1
                                 break
             
-            # 3. 버튼 출력
             for t, (min_v, max_v) in ranges.items():
                 count = counts[t]
-                if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만~{int(max_v//10000)}만) - 총 {count}명", 
-                             use_container_width=True, key=f"t_{t}"):
+                if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만) - 총 {count}명", use_container_width=True, key=f"t_{t}"):
                     st.session_state.mgr_step = 'list'
                     st.session_state.mgr_target = t
                     st.session_state.mgr_min_v = min_v
                     st.session_state.mgr_max_v = max_v
                     st.rerun()
+                
+        elif step == 'list':
+            if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
+                st.session_state.mgr_step = 'tiers'
+                st.rerun()
+            
+            cat = st.session_state.mgr_category
+            target = st.session_state.mgr_target
+            min_v = st.session_state.mgr_min_v
+            max_v = st.session_state.mgr_max_v
+            
+            st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem;'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
+            st.info("💡 이름을 클릭하면 상세 실적을 확인하고 카톡으로 전송할 수 있습니다.")
+            
+            agents = {}
+            for cfg in st.session_state['config']:
+                mgr_col = cfg.get('col_manager', '')
+                if not mgr_col: continue
+                df = st.session_state['raw_data'].get(cfg['file'])
+                if df is None: continue
+                
+                match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
+                for _, row in match_df.iterrows():
+                    code = safe_str(row.get(cfg.get('col_code', '')))
+                    name = safe_str(row.get(cfg.get('col_name', '')))
+                    agency = safe_str(row.get(cfg.get('col_agency', '')))
+                    if not agency: 
+                        agency = safe_str(row.get(cfg.get('col_branch', '')))
+                    
+                    if code and name: 
+                        agents[code] = {"name": name, "agency": agency}
+            
+            if not agents:
+                st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.")
+            else:
+                near_agents = []
+                for code, info in agents.items():
+                    name = info['name']
+                    agency = info['agency']
+                    calc_results, _ = calculate_agent_performance(code)
+                    
+                    for res in calc_results:
+                        if cat == "구간" and res['type'] != "구간": continue
+                        if cat == "브릿지" and "브릿지" not in res['type']: continue
+                        
+                        val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
+                        if min_v <= val < max_v:
+                            near_agents.append((code, name, agency, val))
+                            break
+                
+                if not near_agents:
+                    st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
+                else:
+                    near_agents.sort(key=lambda x: (x[2], x[1]))
+                    
+                    for code, name, agency, val in near_agents:
+                        display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
+                        if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
+                            st.session_state.mgr_selected_code = code
+                            st.session_state.mgr_selected_name = f"[{agency}] {name}"
+                            st.session_state.mgr_step = 'detail'
+                            st.rerun()
+
+        elif step == 'detail':
+            if st.button("⬅️ 명단으로 돌아가기", use_container_width=False):
+                st.session_state.mgr_step = 'list'
+                st.rerun()
+            
+            code = st.session_state.mgr_selected_code
+            name = st.session_state.mgr_selected_name
+            cat = st.session_state.mgr_category
+            
+            st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:20px; border:2px solid #e5e8eb; margin-top:10px; margin-bottom:30px;'>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='color:#3182f6; font-weight:800; font-size:1.5rem; margin-top:0; text-align:center;'>👤 {name} 설계사님 ({cat} 상세)</h4>", unsafe_allow_html=True)
+            
+            calc_results, total_prize = calculate_agent_performance(code)
+            
+            render_ui_cards(name, calc_results, total_prize, show_share_text=True)
+            
+            user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
+            if os.path.exists(user_leaflet_path):
+                st.image(user_leaflet_path, use_container_width=True)
+                
+            st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # 🔒 3. 시스템 관리자 모드
