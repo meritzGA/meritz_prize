@@ -104,6 +104,7 @@ st.markdown("""
     }
     div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
+    /* 🔴 전역 기본 버튼 (메리츠 레드) */
     div.stButton > button {
         font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
@@ -111,24 +112,52 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
     }
     
-    /* 폴더 및 기타 버튼 스타일 */
-    .del-btn-container button {
-        background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
-        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
+    /* 🌟 매니저 폴더 버튼 (회색 박스 디자인) 🌟 */
+    .folder-btn div.stButton > button {
+        background-color: #e8eaed !important; 
+        color: #191f28 !important; 
+        border: 1px solid #d1d6db !important;
+        height: 80px !important; 
+        font-size: 1.25rem !important; 
+        font-weight: 700 !important;
+        border-radius: 15px !important; 
+        box-shadow: none !important;
     }
-    .folder-btn > button {
-        background-color: #ffffff !important; color: #191f28 !important; border: 2px solid #e5e8eb !important;
-        height: 80px !important; font-size: 1.3rem !important; font-weight: 700 !important;
-        border-radius: 15px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
+    
+    /* 🌟 대상자 명단 버튼 (흰 바탕 + 파란 선) 🌟 */
+    .agent-btn div.stButton > button {
+        background-color: #ffffff !important; 
+        color: #3182f6 !important; 
+        border: 2px solid #3182f6 !important;
+        height: auto !important; min-height: 60px !important; padding: 10px !important;
+        font-size: 1.2rem !important; 
+        font-weight: 700 !important;
+        border-radius: 12px !important; 
+        margin-bottom: 5px !important; margin-top: 5px !important;
+        box-shadow: none !important;
+        white-space: normal !important; /* 긴 이름 지사명 줄바꿈 허용 */
     }
-    .agent-btn > button {
-        background-color: #ffffff !important; color: #3182f6 !important; border: 2px solid #3182f6 !important;
-        height: 60px !important; font-size: 1.2rem !important; font-weight: 700 !important;
-        border-radius: 12px !important; margin-bottom: 5px !important; margin-top: 5px !important;
+    
+    /* 🌟 뒤로가기 버튼 🌟 */
+    .back-btn div.stButton > button {
+        background-color: #f2f4f6 !important; 
+        color: #191f28 !important; 
+        border: 1px solid #d1d6db !important;
+        height: 50px !important; 
+        font-size: 1.1rem !important; 
+        margin-bottom: 10px !important; margin-top: 0px !important;
+        box-shadow: none !important;
     }
-    .back-btn > button {
-        background-color: #e5e8eb !important; color: #191f28 !important; border: none !important;
-        height: 50px !important; font-size: 1.1rem !important; margin-bottom: 10px !important; margin-top: 0px !important;
+    
+    /* 관리자용 삭제 버튼 */
+    .del-btn-container div.stButton > button {
+        background-color: #f2f4f6 !important; 
+        color: #dc3545 !important; 
+        border: 1px solid #dc3545 !important;
+        height: 40px !important; 
+        font-size: 1rem !important; 
+        margin-top: 0 !important; 
+        box-shadow: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -322,7 +351,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 
     if show_share_text:
         st.markdown("<h4 style='color:#191f28; font-weight:700; margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
-        st.info("💡 아래 텍스트 박스 안의 글자를 모두 복사해서, 해당 설계사의 카카오톡 채팅창에 붙여넣기 하시면 링크 없이 바로 시상 내용을 보여줄 수 있습니다.")
+        st.info("💡 아래 텍스트 박스 안의 글자를 복사해서, 해당 설계사의 카톡 창에 붙여넣기 하시면 링크 없이 바로 시상 내용을 보여줄 수 있습니다.")
         st.text_area("카카오톡 복사용 텍스트", value=share_text, height=350)
 
 
@@ -401,7 +430,7 @@ if mode == "👥 매니저 관리":
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
                 
-        # 👥 [단계 3] 대상자 이름 명단 리스트
+        # 👥 [단계 3] 대상자 이름 명단 리스트 (지사명 + 이름 표기)
         elif step == 'list':
             st.markdown('<div class="back-btn">', unsafe_allow_html=True)
             if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
@@ -428,13 +457,18 @@ if mode == "👥 매니저 관리":
                 for _, row in match_df.iterrows():
                     code = safe_str(row.get(cfg.get('col_code', '')))
                     name = safe_str(row.get(cfg.get('col_name', '')))
-                    if code and name: agents[code] = name
+                    # 🌟 지사명(조직명) 추출 🌟
+                    branch = safe_str(row.get(cfg.get('col_branch', ''))) 
+                    if code and name: 
+                        agents[code] = {"name": name, "branch": branch}
             
             if not agents:
                 st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.")
             else:
                 near_agents = []
-                for code, name in agents.items():
+                for code, info in agents.items():
+                    name = info['name']
+                    branch = info['branch']
                     calc_results, _ = calculate_agent_performance(code)
                     
                     for res in calc_results:
@@ -443,17 +477,19 @@ if mode == "👥 매니저 관리":
                         
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
                         if min_v <= val < max_v:
-                            near_agents.append((code, name, val))
+                            near_agents.append((code, name, branch, val))
                             break
                 
                 if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
-                    for code, name, val in near_agents:
+                    for code, name, branch, val in near_agents:
+                        # 🌟 명단 버튼에 [지사명] 이름 형식 적용 🌟
+                        display_text = f"👤 [{branch}] {name} 설계사님 (현재 {val:,.0f}원)"
                         st.markdown('<div class="agent-btn">', unsafe_allow_html=True)
-                        if st.button(f"👤 {name} 설계사님 (현재 {val:,.0f}원)", use_container_width=True, key=f"btn_{code}"):
+                        if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
                             st.session_state.mgr_selected_code = code
-                            st.session_state.mgr_selected_name = name
+                            st.session_state.mgr_selected_name = f"[{branch}] {name}" # 상세화면에도 지사명 전달
                             st.session_state.mgr_step = 'detail'
                             st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
