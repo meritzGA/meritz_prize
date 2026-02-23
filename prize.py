@@ -262,7 +262,6 @@ if mode == "⚙️ 시스템 관리자 모드":
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
         cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
         
-        # 라디오 버튼 초기값 설정 (글자 중복 방지 로직)
         idx = 0
         if "1기간" in cfg['type']: idx = 1
         elif "2기간" in cfg['type']: idx = 2
@@ -286,7 +285,6 @@ if mode == "⚙️ 시스템 관리자 모드":
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
             
-            # 🌟 시책 종류별 조건부 표시 (조건문 충돌 완벽 해결) 🌟
             if "1기간" in cfg['type']:
                 cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
                 cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
@@ -295,7 +293,7 @@ if mode == "⚙️ 시스템 관리자 모드":
                 col_key = 'col_val_curr'
                 cfg[col_key] = st.selectbox("당월 실적 수치 컬럼", cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
                 cfg['curr_req'] = st.number_input("차월 필수 달성 조건 금액 (합산용)", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
-            else: # 구간 시책
+            else: 
                 col_key = 'col_val'
                 cfg[col_key] = st.selectbox("실적 수치 컬럼", cols, index=get_idx(cfg.get(col_key, ''), cols), key=f"cval_{i}")
 
@@ -357,8 +355,7 @@ else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     
-    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
-    
+    # 🌟 백그라운드를 그리는 HTML 태그를 모두 삭제하여 빈 하얀 박스 버그 완벽 제거 🌟
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
 
@@ -402,7 +399,6 @@ else:
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
-    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not user_name or not branch_code_input:
@@ -418,7 +414,6 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                # 사용자가 콤보박스에서 설계사 코드를 선택한 경우 데이터 필터링
                 if needs_disambiguation and selected_code and 'col_code' in cfg and cfg['col_code']:
                     match_df = match_df[match_df[cfg['col_code']].fillna('').astype(str).str.strip() == selected_code]
                 
@@ -427,7 +422,6 @@ else:
                 
                 p_type = cfg.get('type', '구간 시책')
                 
-                # 🌟 오류 방지 로직: 검사 순서를 1기간 -> 2기간 -> 구간 순으로 명확히 함 🌟
                 if "1기간" in p_type: 
                     raw_prev = match_df[cfg['col_val_prev']].values[0]
                     raw_curr = match_df[cfg['col_val_curr']].values[0]
@@ -469,7 +463,6 @@ else:
                             calc_rate = rate
                             break
                             
-                    # 브릿지 2기간: 차월 필수조건(10만원) 합산 시상금 계산
                     if tier_achieved > 0:
                         prize = (tier_achieved + curr_req) * (calc_rate / 100)
                     
@@ -479,7 +472,7 @@ else:
                     })
                     total_prize_sum += prize
 
-                else: # 기본 구간 시책
+                else: 
                     raw_val = match_df[cfg['col_val']].values[0]
                     try: val = float(str(raw_val).replace(',', ''))
                     except: val = 0.0
@@ -498,7 +491,6 @@ else:
                     })
                     total_prize_sum += prize
 
-            # 안전한 문자열 묶음 방식 처리
             if len(calculated_results) > 0:
                 summary_html = (
                     f"<div class='summary-card'>"
@@ -578,7 +570,6 @@ else:
                         )
                     st.markdown(card_html, unsafe_allow_html=True)
                 
-                # 🌟 등록된 리플렛 이미지 띄우기 🌟
                 user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
                 if os.path.exists(user_leaflet_path):
                     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
