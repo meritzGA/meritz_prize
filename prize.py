@@ -53,6 +53,12 @@ st.markdown("""
         letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
+    /* 스트림릿 입력 폼(Form) 카드로 만듦 */
+    [data-testid="stForm"] {
+        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
+    }
+
     /* 요약 카드 */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
@@ -103,6 +109,12 @@ st.markdown("""
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
         color: white !important; border: none !important; width: 100%; margin-top: 15px;
     }
+    
+    /* 삭제 버튼 전용 작은 스타일 (일반 버튼에 영향 안 주게) */
+    .del-btn-container button {
+        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important;
+        background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -124,7 +136,10 @@ if mode == "⚙️ 시스템 관리자 모드":
         
     st.success("인증 성공! 변경 후 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
+    # --- 1. 파일 업로드 및 관리 섹션 ---
+    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
+    
     if uploaded_files:
         for file in uploaded_files:
             if file.name not in st.session_state['raw_data']:
@@ -140,20 +155,70 @@ if mode == "⚙️ 시스템 관리자 모드":
                                 file.seek(0)
                                 df = pd.read_csv(file, sep='\t', encoding='cp949')
                 else: df = pd.read_excel(file)
+                
                 st.session_state['raw_data'][file.name] = df
-        st.success(f"업로드 완료! (현재 {len(st.session_state['raw_data'])}개 파일 보유)")
+                # 서버에 즉시 영구 저장
+                df.to_pickle(os.path.join(DATA_DIR, f"{file.name}.pkl"))
+                
+        st.success("✅ 파일 업로드 및 저장이 완료되었습니다.")
+        st.rerun() # 업로드 직후 목록 갱신
 
+    # 업로드된 파일 목록 및 삭제 기능
+    if st.session_state['raw_data']:
+        st.markdown("<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-bottom:20px;'>", unsafe_allow_html=True)
+        col1, col2 = st.columns([7, 3])
+        with col1:
+            st.markdown(f"**현재 저장된 파일 ({len(st.session_state['raw_data'])}개)**")
+        with col2:
+            st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
+            if st.button("🗑️ 전체 파일 삭제", use_container_width=True):
+                st.session_state['raw_data'].clear()
+                for f in os.listdir(DATA_DIR):
+                    if f.endswith('.pkl'): os.remove(os.path.join(DATA_DIR, f))
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
+        
+        for file_name in list(st.session_state['raw_data'].keys()):
+            col_name, col_btn = st.columns([8, 2])
+            with col_name:
+                st.write(f"📄 {file_name}")
+            with col_btn:
+                st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
+                if st.button("삭제", key=f"del_file_{file_name}", use_container_width=True):
+                    del st.session_state['raw_data'][file_name]
+                    pkl_path = os.path.join(DATA_DIR, f"{file_name}.pkl")
+                    if os.path.exists(pkl_path): os.remove(pkl_path)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- 2. 시책 항목 상세 설정 섹션 ---
     if st.session_state['raw_data']:
         st.divider()
-        if st.button("➕ 시책 항목 추가"):
-            first_file = list(st.session_state['raw_data'].keys())[0]
-            st.session_state['config'].append({
-                "name": f"신규 시책 {len(st.session_state['config'])+1}",
-                "desc": "", "type": "구간 시책", 
-                "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", 
-                "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
-                "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
-            })
+        st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>2. 시책 항목 상세 설정</h3>", unsafe_allow_html=True)
+        
+        col_add, col_del_all = st.columns([7, 3])
+        with col_add:
+            if st.button("➕ 시책 항목 추가"):
+                first_file = list(st.session_state['raw_data'].keys())[0]
+                st.session_state['config'].append({
+                    "name": f"신규 시책 {len(st.session_state['config'])+1}",
+                    "desc": "", "type": "구간 시책", 
+                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", 
+                    "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
+                    "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
+                })
+                st.rerun()
+        with col_del_all:
+            st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
+            if st.button("🗑️ 전체 시책 삭제", use_container_width=True):
+                st.session_state['config'].clear()
+                with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
+                    json.dump([], f, ensure_ascii=False)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
         for i, cfg in enumerate(st.session_state['config']):
             # 기존 데이터 호환성 보장
@@ -166,7 +231,21 @@ if mode == "⚙️ 시스템 관리자 모드":
             if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
             if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
 
-            st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin-top:30px;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:15px; border:1px solid #e5e8eb; margin-top:20px;'>", unsafe_allow_html=True)
+            
+            c_title, c_del = st.columns([8, 2])
+            with c_title:
+                st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin:0;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
+            with c_del:
+                st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
+                if st.button("🗑️ 삭제", key=f"del_cfg_{i}", use_container_width=True):
+                    st.session_state['config'].pop(i)
+                    with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
+                        json.dump(st.session_state['config'], f, ensure_ascii=False)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
             
             cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
             cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
@@ -210,11 +289,9 @@ if mode == "⚙️ 시스템 관리자 모드":
                     cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
                 except:
                     st.error("형식이 올바르지 않습니다.")
-            st.divider() 
+            st.markdown("</div>", unsafe_allow_html=True) 
                     
         if st.button("✅ 설정 완료 및 서버에 반영하기", type="primary"):
-            for k, v in st.session_state['raw_data'].items():
-                v.to_pickle(os.path.join(DATA_DIR, f"{k}.pkl"))
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
                 json.dump(st.session_state['config'], f, ensure_ascii=False)
             st.success("서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
@@ -226,6 +303,8 @@ else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
     
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
+    
+    st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
     
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
@@ -255,7 +334,6 @@ else:
                 
                 if not match.empty:
                     matched_configs[i] = match
-                    # 지점명만 추출하여 셋(Set)에 담기
                     if 'col_branch' in cfg and cfg['col_branch']:
                         for _, row in match.iterrows():
                             branch_name = str(row[cfg['col_branch']]).strip()
@@ -266,11 +344,12 @@ else:
     
     selected_branch = None
     if len(branches_found) > 1:
-        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 지점명을 선택해주세요.")
+        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 지점을 선택해주세요.")
         selected_branch = st.selectbox("나의 지점명 선택", sorted(list(branches_found)))
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if submit:
         if not user_name or not branch_code_input:
@@ -286,7 +365,6 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                # 사용자가 콤보박스에서 지점명을 선택한 경우 필터링 (동명이인 처리)
                 if needs_disambiguation and selected_branch and 'col_branch' in cfg and cfg['col_branch']:
                     match_df = match_df[match_df[cfg['col_branch']].fillna('').astype(str).str.strip() == selected_branch]
                 
