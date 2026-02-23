@@ -34,7 +34,7 @@ def safe_str(val):
     if s.endswith('.0'): s = s[:-2]
     return s
 
-# --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 모바일 최적화) ---
+# --- 🎨 커스텀 CSS (버튼 색상 분리 및 모바일 최적화) ---
 st.markdown("""
 <style>
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
@@ -80,16 +80,6 @@ st.markdown("""
     .prize-label { color: #191f28; font-size: 1.3rem; font-weight: 700; word-break: keep-all; white-space: nowrap; }
     .prize-value { color: rgb(128, 0, 0); font-size: 1.8rem; font-weight: 800; white-space: nowrap; text-align: right; } 
     
-    @media (max-width: 450px) {
-        .summary-total { font-size: 2.1rem !important; }
-        .summary-label { font-size: 1.05rem !important; }
-        .prize-label { font-size: 1.1rem !important; }
-        .prize-value { font-size: 1.45rem !important; }
-        .data-label { font-size: 1rem !important; }
-        .data-value { font-size: 1.15rem !important; }
-        .toss-title { font-size: 1.4rem !important; }
-    }
-    
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
@@ -102,62 +92,24 @@ st.markdown("""
     div[data-testid="stSelectbox"] > div {
         background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important;
     }
-    div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
-    /* 🔴 전역 기본 버튼 (메리츠 레드) */
-    div.stButton > button {
+    /* 🔴 메인 동작 버튼 (Primary) - 다크 레드 */
+    div.stButton > button[kind="primary"] {
         font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
-        color: white !important; border: none !important; width: 100%; margin-top: 15px; margin-bottom: 25px;
-        box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2);
+        color: white !important; border: none !important; width: 100%; margin-top: 10px; margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2) !important;
     }
     
-    /* 🌟 매니저 폴더 버튼 (회색 박스 디자인) 🌟 */
-    .folder-btn div.stButton > button {
-        background-color: #e8eaed !important; 
-        color: #191f28 !important; 
-        border: 1px solid #d1d6db !important;
-        height: 80px !important; 
-        font-size: 1.25rem !important; 
-        font-weight: 700 !important;
-        border-radius: 15px !important; 
-        box-shadow: none !important;
-    }
-    
-    /* 🌟 대상자 명단 버튼 (흰 바탕 + 파란 선) 🌟 */
-    .agent-btn div.stButton > button {
-        background-color: #ffffff !important; 
-        color: #3182f6 !important; 
-        border: 2px solid #3182f6 !important;
-        height: auto !important; min-height: 60px !important; padding: 10px !important;
-        font-size: 1.2rem !important; 
-        font-weight: 700 !important;
-        border-radius: 12px !important; 
-        margin-bottom: 5px !important; margin-top: 5px !important;
-        box-shadow: none !important;
-        white-space: normal !important; /* 긴 이름 지사명 줄바꿈 허용 */
-    }
-    
-    /* 🌟 뒤로가기 버튼 🌟 */
-    .back-btn div.stButton > button {
-        background-color: #f2f4f6 !important; 
-        color: #191f28 !important; 
-        border: 1px solid #d1d6db !important;
-        height: 50px !important; 
-        font-size: 1.1rem !important; 
-        margin-bottom: 10px !important; margin-top: 0px !important;
-        box-shadow: none !important;
-    }
-    
-    /* 관리자용 삭제 버튼 */
-    .del-btn-container div.stButton > button {
-        background-color: #f2f4f6 !important; 
-        color: #dc3545 !important; 
-        border: 1px solid #dc3545 !important;
-        height: 40px !important; 
-        font-size: 1rem !important; 
-        margin-top: 0 !important; 
-        box-shadow: none !important;
+    /* 📁 폴더 및 보조 버튼 (Secondary) - 연한 회색 & 검정 글씨 */
+    div.stButton > button[kind="secondary"] {
+        font-size: 1.2rem !important; font-weight: 700 !important; 
+        min-height: 60px !important; height: auto !important; padding: 10px !important;
+        border-radius: 12px !important; background-color: #e8eaed !important;
+        color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; 
+        margin-top: 5px; margin-bottom: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+        white-space: normal !important; /* 긴 텍스트 줄바꿈 허용 */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -176,7 +128,6 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code: continue
         
-        # 소수점 오류 방지 비교
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
@@ -264,7 +215,6 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
         f"<div class='summary-divider'></div>"
     )
     
-    # 🌟 카카오톡 공유용 텍스트 예쁘게 생성 🌟
     share_text = f"🎯 [{user_name} 팀장님 실적 현황]\n"
     share_text += f"💰 총 확보 시상금: {total_prize_sum:,.0f}원\n"
     share_text += "────────────────\n"
@@ -351,7 +301,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 
     if show_share_text:
         st.markdown("<h4 style='color:#191f28; font-weight:700; margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
-        st.info("💡 아래 텍스트 박스 안의 글자를 복사해서, 해당 설계사의 카톡 창에 붙여넣기 하시면 링크 없이 바로 시상 내용을 보여줄 수 있습니다.")
+        st.info("💡 아래 텍스트 박스 안의 글자를 복사해서, 해당 설계사의 카톡 창에 붙여넣기 하시면 바로 시상 내용을 보여줄 수 있습니다.")
         st.text_area("카카오톡 복사용 텍스트", value=share_text, height=350)
 
 
@@ -370,46 +320,37 @@ if mode == "👥 매니저 관리":
     
     if not st.session_state.mgr_logged_in:
         mgr_code = st.text_input("지원매니저 사번(코드) 또는 이름을 입력하세요", type="password", placeholder="예: 12345 또는 홍길동")
-        if st.button("로그인"):
+        if st.button("로그인", type="primary"):
             st.session_state.mgr_logged_in = True
             st.session_state.mgr_code = mgr_code
             st.session_state.mgr_step = 'main'
             st.rerun()
     else:
-        st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
-        if st.button("🚪 로그아웃", use_container_width=True):
+        if st.button("🚪 로그아웃"):  # Secondary(회색) 적용됨
             st.session_state.mgr_logged_in = False
             st.rerun()
-        st.markdown('</div><br>', unsafe_allow_html=True)
+        st.markdown('<br>', unsafe_allow_html=True)
         
         step = st.session_state.get('mgr_step', 'main')
         
-        # 📂 [단계 1] 메인 카테고리 선택
         if step == 'main':
             st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown('<div class="folder-btn">', unsafe_allow_html=True)
                 if st.button("📁 구간실적 관리", use_container_width=True):
                     st.session_state.mgr_step = 'tiers'
                     st.session_state.mgr_category = '구간'
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
             with col2:
-                st.markdown('<div class="folder-btn">', unsafe_allow_html=True)
                 if st.button("📁 브릿지실적 관리", use_container_width=True):
                     st.session_state.mgr_step = 'tiers'
                     st.session_state.mgr_category = '브릿지'
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
                 
-        # 📂 [단계 2] 구간(폴더) 선택
         elif step == 'tiers':
-            st.markdown('<div class="back-btn">', unsafe_allow_html=True)
             if st.button("⬅️ 뒤로가기", use_container_width=False):
                 st.session_state.mgr_step = 'main'
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
             
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
@@ -421,22 +362,17 @@ if mode == "👥 매니저 관리":
                 100000: (0, 100000)
             }
             for t, (min_v, max_v) in ranges.items():
-                st.markdown('<div class="folder-btn" style="margin-bottom:10px;">', unsafe_allow_html=True)
                 if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만)", use_container_width=True, key=f"t_{t}"):
                     st.session_state.mgr_step = 'list'
                     st.session_state.mgr_target = t
                     st.session_state.mgr_min_v = min_v
                     st.session_state.mgr_max_v = max_v
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
                 
-        # 👥 [단계 3] 대상자 이름 명단 리스트 (지사명 + 이름 표기)
         elif step == 'list':
-            st.markdown('<div class="back-btn">', unsafe_allow_html=True)
             if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'tiers'
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
             
             cat = st.session_state.mgr_category
             target = st.session_state.mgr_target
@@ -457,10 +393,13 @@ if mode == "👥 매니저 관리":
                 for _, row in match_df.iterrows():
                     code = safe_str(row.get(cfg.get('col_code', '')))
                     name = safe_str(row.get(cfg.get('col_name', '')))
-                    # 🌟 지사명(조직명) 추출 🌟
-                    branch = safe_str(row.get(cfg.get('col_branch', ''))) 
+                    # 🌟 대리점 지사명 우선 추출, 없으면 지점명 대체 🌟
+                    agency = safe_str(row.get(cfg.get('col_agency', '')))
+                    if not agency: 
+                        agency = safe_str(row.get(cfg.get('col_branch', '')))
+                    
                     if code and name: 
-                        agents[code] = {"name": name, "branch": branch}
+                        agents[code] = {"name": name, "agency": agency}
             
             if not agents:
                 st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.")
@@ -468,7 +407,7 @@ if mode == "👥 매니저 관리":
                 near_agents = []
                 for code, info in agents.items():
                     name = info['name']
-                    branch = info['branch']
+                    agency = info['agency']
                     calc_results, _ = calculate_agent_performance(code)
                     
                     for res in calc_results:
@@ -477,30 +416,25 @@ if mode == "👥 매니저 관리":
                         
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
                         if min_v <= val < max_v:
-                            near_agents.append((code, name, branch, val))
+                            near_agents.append((code, name, agency, val))
                             break
                 
                 if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
-                    for code, name, branch, val in near_agents:
+                    for code, name, agency, val in near_agents:
                         # 🌟 명단 버튼에 [지사명] 이름 형식 적용 🌟
-                        display_text = f"👤 [{branch}] {name} 설계사님 (현재 {val:,.0f}원)"
-                        st.markdown('<div class="agent-btn">', unsafe_allow_html=True)
+                        display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
                         if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
                             st.session_state.mgr_selected_code = code
-                            st.session_state.mgr_selected_name = f"[{branch}] {name}" # 상세화면에도 지사명 전달
+                            st.session_state.mgr_selected_name = f"[{agency}] {name}"
                             st.session_state.mgr_step = 'detail'
                             st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
 
-        # 👤 [단계 4] 특정 설계사 상세 정보 및 카톡 전송 화면
         elif step == 'detail':
-            st.markdown('<div class="back-btn">', unsafe_allow_html=True)
             if st.button("⬅️ 명단으로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'list'
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
             
             code = st.session_state.mgr_selected_code
             name = st.session_state.mgr_selected_name
@@ -511,7 +445,6 @@ if mode == "👥 매니저 관리":
             
             calc_results, total_prize = calculate_agent_performance(code)
             
-            # 카톡 텍스트가 포함된 UI 렌더링
             render_ui_cards(name, calc_results, total_prize, show_share_text=True)
             
             user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
@@ -566,13 +499,11 @@ elif mode == "⚙️ 시스템 관리자":
     with col1:
         st.markdown(f"**현재 저장된 파일 ({len(st.session_state['raw_data'])}개)**")
     with col2:
-        st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
         if st.button("🗑️ 전체 파일 삭제", use_container_width=True):
             st.session_state['raw_data'].clear()
             for f in os.listdir(DATA_DIR):
                 if f.endswith('.pkl'): os.remove(os.path.join(DATA_DIR, f))
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
         
     st.divider()
     
@@ -583,20 +514,17 @@ elif mode == "⚙️ 시스템 관리자":
             col_name, col_btn = st.columns([8, 2])
             with col_name: st.write(f"📄 {file_name}")
             with col_btn:
-                st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
                 if st.button("개별 삭제", key=f"del_file_{file_name}", use_container_width=True):
                     del st.session_state['raw_data'][file_name]
                     pkl_path = os.path.join(DATA_DIR, f"{file_name}.pkl")
                     if os.path.exists(pkl_path): os.remove(pkl_path)
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-            st.divider()
+            st.markdown("<hr style='margin:10px 0; opacity:0.3;'>", unsafe_allow_html=True)
 
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
     
     col_add, col_del_all = st.columns(2)
     with col_add:
-        st.markdown('<style>div.row-widget.stButton > button[kind="primary"] { background-color: #3182f6 !important; }</style>', unsafe_allow_html=True)
         if st.button("➕ 신규 시상 항목 추가", type="primary", use_container_width=True):
             if not st.session_state['raw_data']:
                 st.error("⚠️ 먼저 실적 파일을 1개 이상 업로드해야 시상을 추가할 수 있습니다.")
@@ -605,20 +533,18 @@ elif mode == "⚙️ 시스템 관리자":
                 st.session_state['config'].append({
                     "name": f"신규 시책 {len(st.session_state['config'])+1}",
                     "desc": "", "type": "구간 시책", 
-                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_manager": "",
+                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", "col_manager": "",
                     "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
                     "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
                 })
                 st.rerun()
                 
     with col_del_all:
-        st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
         if st.button("🗑️ 모든 시상 항목 일괄 삭제", use_container_width=True):
             st.session_state['config'].clear()
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
                 json.dump([], f, ensure_ascii=False)
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     if not st.session_state['config']:
         st.info("현재 설정된 시상 항목이 없습니다. [➕ 신규 시상 항목 추가] 버튼을 눌러주세요.")
@@ -628,6 +554,7 @@ elif mode == "⚙️ 시스템 관리자":
         if 'type' not in cfg: cfg['type'] = "구간 시책"
         if 'col_code' not in cfg: cfg['col_code'] = ""
         if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') 
+        if 'col_agency' not in cfg: cfg['col_agency'] = ""
         if 'col_manager' not in cfg: cfg['col_manager'] = ""
         if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
         if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
@@ -639,13 +566,11 @@ elif mode == "⚙️ 시스템 관리자":
         with c_title:
             st.markdown(f"<h3 style='color:#191f28; font-size:1.3rem; margin:0;'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
         with c_del:
-            st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
             if st.button("개별 삭제", key=f"del_cfg_{i}", use_container_width=True):
                 st.session_state['config'].pop(i)
                 with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
                     json.dump(st.session_state['config'], f, ensure_ascii=False)
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
         
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
         cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
@@ -668,9 +593,10 @@ elif mode == "⚙️ 시스템 관리자":
             cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
             def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
-            st.info("💡 식별을 위해 아래 4개 컬럼을 정확히 지정해주세요.")
+            st.info("💡 식별을 위해 아래 5개 컬럼을 정확히 지정해주세요.")
             cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
+            cfg['col_agency'] = st.selectbox("대리점/지사명 컬럼 (명단 표시용)", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
             cfg['col_manager'] = st.selectbox("매니저코드(비번) 컬럼 (매니저 화면용)", cols, index=get_idx(cfg['col_manager'], cols), key=f"cmgr_{i}")
             
@@ -718,16 +644,13 @@ elif mode == "⚙️ 시스템 관리자":
         st.markdown("<p style='color:#333d4b; font-weight:600;'>현재 등록된 리플렛 이미지:</p>", unsafe_allow_html=True)
         st.image(leaflet_path, width=250)
         
-        st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
         if st.button("🗑️ 등록된 리플렛 삭제", use_container_width=False):
             os.remove(leaflet_path)
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state['config']:
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<style>div.row-widget.stButton > button[kind="secondary"] { background-color: rgb(128, 0, 0) !important; color: white !important; font-size: 1.5rem !important; height: 70px !important; }</style>', unsafe_allow_html=True)
-        if st.button("✅ 모든 설정 완료 및 서버에 반영하기", use_container_width=True):
+        if st.button("✅ 모든 설정 완료 및 서버에 반영하기", type="primary", use_container_width=True):
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
                 json.dump(st.session_state['config'], f, ensure_ascii=False)
             st.success("✅ 서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
@@ -777,9 +700,7 @@ else:
         selected_code = st.selectbox("나의 설계사코드 선택", sorted(list(codes_found)))
         needs_disambiguation = True
 
-    submit = st.button("내 실적 확인하기")
-
-    if submit:
+    if st.button("내 실적 확인하기", type="primary"):
         if not user_name or not branch_code_input:
             st.warning("이름과 지점코드를 입력해주세요.")
         elif not st.session_state['config']:
