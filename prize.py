@@ -349,7 +349,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     if weekly_res:
         summary_html = (
             f"<div class='summary-card'>"
-            f"<div class='summary-label'>{user_name} 팀장님의 진행 중인 시책 예상 시상</div>"
+            f"<div class='summary-label'>{user_name} 팀장님의 시상 확보 현황</div>"
             f"<div class='summary-total'>{weekly_total:,.0f}원</div>"
             f"<div class='summary-divider'></div>"
         )
