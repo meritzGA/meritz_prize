@@ -27,7 +27,7 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# 기존 데이터 호환성 보장 (category 키 없는 경우 기본 주차시상으로 설정)
+# 기존 데이터 호환성 보장
 for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
@@ -59,11 +59,20 @@ st.markdown("""
 
     [data-testid="stForm"] { background-color: transparent; border: none; padding: 0; margin-bottom: 24px; }
 
+    /* 기본 구간 시책 요약 카드 (레드) */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
         box-shadow: 0 10px 25px rgba(128, 0, 0, 0.25);
     }
+    
+    /* 월간 누계 전용 요약 카드 (딥 네이비 파란색) */
+    .cumulative-card { 
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
+        border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
+        box-shadow: 0 10px 25px rgba(30, 60, 114, 0.25);
+    }
+    
     .summary-label { color: rgba(255,255,255,0.85); font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
     .summary-total { color: #ffffff; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; white-space: nowrap; word-break: keep-all; }
     .summary-item-name { color: rgba(255,255,255,0.95); font-size: 1.15rem; }
@@ -81,7 +90,6 @@ st.markdown("""
     .data-label { color: #8b95a1; font-size: 1.1rem; word-break: keep-all; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
     
-    /* 상위 구간 부족 금액 강조 디자인 */
     .shortfall-row { background-color: #fff0f0; padding: 14px; border-radius: 12px; margin-top: 15px; margin-bottom: 5px; border: 2px dashed #ff4b4b; text-align: center; }
     .shortfall-text { color: #d9232e; font-size: 1.2rem; font-weight: 800; word-break: keep-all; }
 
@@ -92,7 +100,7 @@ st.markdown("""
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 🌟 누계 전용 가로 박스 (한 줄 정렬) 스타일 🌟 */
+    /* 누계 전용 가로 박스 (한 줄 정렬) 스타일 */
     .cumul-flex-container {
         display: flex; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 30px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 5px;
     }
@@ -115,6 +123,17 @@ st.markdown("""
         font-size: 1.2rem !important; font-weight: 700 !important; min-height: 60px !important; height: auto !important; padding: 10px !important;
         border-radius: 12px !important; background-color: #e8eaed !important; color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; margin-top: 5px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; white-space: normal !important; 
     }
+    
+    @media (max-width: 450px) {
+        .summary-total { font-size: 2.1rem !important; }
+        .summary-label { font-size: 1.05rem !important; }
+        .prize-label { font-size: 1.1rem !important; }
+        .prize-value { font-size: 1.45rem !important; }
+        .data-label { font-size: 1rem !important; }
+        .data-value { font-size: 1.15rem !important; }
+        .toss-title { font-size: 1.4rem !important; }
+        .shortfall-text { font-size: 1.05rem !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -136,7 +155,7 @@ def calculate_agent_performance(target_code):
         cat = cfg.get('category', 'weekly')
         p_type = cfg.get('type', '구간 시책')
         
-        # 1. 주차/브릿지 시상 계산
+        # 1. 주차/브릿지 시상 계산 (기존 유지)
         if cat == 'weekly':
             if "1기간" in p_type: 
                 raw_prev = match_df[cfg['col_val_prev']].values[0]
@@ -222,31 +241,21 @@ def calculate_agent_performance(target_code):
                     "next_tier": next_tier, "shortfall": shortfall
                 })
         
-        # 2. 월간 누계 시상 계산 (구간 계산식 동일 적용)
+        # 🌟 2. 월간 누계 시상 계산 (데이터에서 실적/시상금 바로 끌어오기) 🌟
         elif cat == 'cumulative':
-            raw_val = match_df[cfg['col_val']].values[0]
+            col_val = cfg.get('col_val', '')
+            raw_val = match_df[col_val].values[0] if col_val and col_val in match_df.columns else 0
             try: val = float(str(raw_val).replace(',', ''))
             except: val = 0.0
             
-            calc_rate, tier_achieved, prize = 0, 0, 0
-            for amt, rate in cfg['tiers']:
-                if val >= amt:
-                    tier_achieved = amt
-                    calc_rate = rate
-                    prize = tier_achieved * (calc_rate / 100) 
-                    break
-                    
-            next_tier = None
-            for amt, rate in reversed(cfg['tiers']):
-                if val < amt:
-                    next_tier = amt
-                    break
-            shortfall = next_tier - val if next_tier else 0
+            col_prize = cfg.get('col_prize', '')
+            raw_prize = match_df[col_prize].values[0] if col_prize and col_prize in match_df.columns else 0
+            try: prize = float(str(raw_prize).replace(',', ''))
+            except: prize = 0.0
             
             calculated_results.append({
                 "name": cfg['name'], "desc": cfg.get('desc', ''), "category": "cumulative", "type": "누계",
-                "val": val, "tier": tier_achieved, "rate": calc_rate, "prize": prize,
-                "next_tier": next_tier, "shortfall": shortfall
+                "val": val, "prize": prize
             })
             
     total_prize_sum = sum(r['prize'] for r in calculated_results)
@@ -269,18 +278,17 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     if weekly_res:
         summary_html = (
             f"<div class='summary-card'>"
-            f"<div class='summary-label'>{user_name} 팀장님의 주차/브릿지 시상금</div>"
+            f"<div class='summary-label'>{user_name} 팀장님의 진행 중인 시책 예상 시상</div>"
             f"<div class='summary-total'>{weekly_total:,.0f}원</div>"
             f"<div class='summary-divider'></div>"
         )
-        share_text += f"📌 [주차/브릿지 시상]\n"
+        share_text += f"📌 [진행 중인 시책]\n"
         
         for res in weekly_res:
             if res['type'] in ["구간", "브릿지1"]:
                 summary_html += f"<div class='data-row' style='padding: 6px 0;'><span class='summary-item-name'>{res['name']}</span><span class='summary-item-val'>{res['prize']:,.0f}원</span></div>"
                 share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원\n"
             else: 
-                # 🌟 (다음 달 10만 가동 조건) 줄바꿈 적용 🌟
                 summary_html += f"<div class='data-row' style='padding: 6px 0; align-items:flex-start;'><span class='summary-item-name'>{res['name']}<br><span style='font-size:0.95rem; color:rgba(255,255,255,0.7);'>(다음 달 {int(res['curr_req']//10000)}만 가동 조건)</span></span><span class='summary-item-val'>{res['prize']:,.0f}원</span></div>"
                 share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (다음 달 {int(res['curr_req']//10000)}만 가동 조건)\n"
                 
@@ -345,24 +353,40 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 
             st.markdown(card_html, unsafe_allow_html=True)
 
-    # --- 🔵 2. 월간 누계 시상 (가로 박스 배열) ---
+    # --- 🔵 2. 월간 누계 시상 (파란 박스 / 가로 배열) ---
     if cumul_res:
-        st.markdown("<h3 style='color:#1e3c72; font-weight:800; margin-top:20px; margin-bottom:15px;'>📈 월간 누계 시상 현황</h3>", unsafe_allow_html=True)
-        share_text += f"\n📈 [월간 누계 시상]\n"
+        cumul_html = (
+            f"<div class='cumulative-card'>"
+            f"<div class='summary-label'>{user_name} 팀장님의 월간 확정(누계) 시상</div>"
+            f"<div class='summary-total'>{cumul_total:,.0f}원</div>"
+            f"<div class='summary-divider'></div>"
+        )
         
-        # 🌟 항목 개수에 맞춰 가로로 배열되도록 Flex 컨테이너 사용 🌟
+        share_text += f"\n🏆 [월간 확정 누계 시상]\n"
+        for res in cumul_res:
+            cumul_html += (
+                f"<div class='data-row' style='padding: 6px 0;'>"
+                f"<span class='summary-item-name'>{res['name']}</span>"
+                f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
+                f"</div>"
+            )
+            share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (누계 {res['val']:,.0f}원)\n"
+        cumul_html += "</div>"
+        st.markdown(cumul_html, unsafe_allow_html=True)
+        
+        st.markdown("<h3 style='color:#1e3c72; font-weight:800; margin-top:20px; margin-bottom:15px;'>📈 세부 항목별 시상금</h3>", unsafe_allow_html=True)
+        
+        # 가로 한 줄 정렬 박스 렌더링
         flex_html = "<div class='cumul-flex-container'>"
         for res in cumul_res:
             flex_html += f"""
             <div class='cumul-flex-box'>
                 <div style='font-size: 1.1rem; color: #1e3c72; font-weight: 700; margin-bottom: 8px;'>{res['name']}</div>
-                <div style='font-size: 0.95rem; color: #8b95a1; margin-bottom: 4px;'>누계: {res['val']:,.0f}원</div>
-                <div style='font-size: 1.3rem; color: #d9232e; font-weight: 800;'>{res['prize']:,.0f}원</div>
+                <div style='font-size: 0.95rem; color: #8b95a1; margin-bottom: 4px;'>누계실적: {res['val']:,.0f}원</div>
+                <div style='font-size: 1.4rem; color: #d9232e; font-weight: 800;'>{res['prize']:,.0f}원</div>
             </div>
             """
-            share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (누계 {res['val']:,.0f}원)\n"
         flex_html += "</div>"
-        
         st.markdown(flex_html, unsafe_allow_html=True)
 
     if show_share_text:
@@ -635,6 +659,7 @@ elif mode == "⚙️ 시스템 관리자":
         st.info("현재 설정된 주차/브릿지 시상이 없습니다.")
 
     for i, cfg in weekly_cfgs:
+        if 'desc' not in cfg: cfg['desc'] = ""
         st.markdown(f"<div style='background:#f9fafb; padding:15px; border-radius:15px; border:1px solid #e5e8eb; margin-top:15px;'>", unsafe_allow_html=True)
         c_title, c_del = st.columns([8, 2])
         with c_title: st.markdown(f"**📌 {cfg['name']}**")
@@ -659,16 +684,16 @@ elif mode == "⚙️ 시스템 관리자":
             cols = st.session_state['raw_data'][cfg['file']].columns.tolist() if file_opts else []
             def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
-            cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
-            cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
-            cfg['col_agency'] = st.selectbox("대리점/지사명 컬럼", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
-            cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
-            cfg['col_manager'] = st.selectbox("매니저코드(비번) 컬럼", cols, index=get_idx(cfg['col_manager'], cols), key=f"cmgr_{i}")
+            cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg.get('col_name', ''), cols), key=f"cname_{i}")
+            cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
+            cfg['col_agency'] = st.selectbox("대리점/지사명 컬럼", cols, index=get_idx(cfg.get('col_agency', ''), cols), key=f"cagency_{i}")
+            cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
+            cfg['col_manager'] = st.selectbox("매니저코드(비번) 컬럼", cols, index=get_idx(cfg.get('col_manager', ''), cols), key=f"cmgr_{i}")
             
             if "1기간" in cfg['type']:
-                cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg['col_val_prev'], cols), key=f"cvalp_{i}")
-                cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg['col_val_curr'], cols), key=f"cvalc_{i}")
-                cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg['curr_req']), step=10000.0, key=f"creq_{i}")
+                cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_prev', ''), cols), key=f"cvalp_{i}")
+                cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_curr', ''), cols), key=f"cvalc_{i}")
+                cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
             elif "2기간" in cfg['type']:
                 cfg['col_val_curr'] = st.selectbox("당월 실적 수치 컬럼", cols, index=get_idx(cfg.get('col_val_curr', ''), cols), key=f"cval_{i}")
                 cfg['curr_req'] = st.number_input("차월 필수 달성 조건 금액 (합산용)", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
@@ -677,7 +702,7 @@ elif mode == "⚙️ 시스템 관리자":
 
         with col2:
             st.write("📈 구간 설정 (달성금액, 지급률%)")
-            tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
+            tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg.get('tiers', [])])
             tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
             try:
                 new_tiers = []
@@ -691,13 +716,11 @@ elif mode == "⚙️ 시스템 관리자":
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # 🌟 챕터 2: 월간 누계 시상 항목 관리 🌟
+    # 🌟 챕터 2: 월간 누계 시상 항목 관리 (간소화) 🌟
     # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 style='color:#1e3c72; font-size:1.4rem; margin-top:10px;'>📈 3. 월간 누계 시상 항목 관리</h3>", unsafe_allow_html=True)
-    st.info("💡 누계값을 엑셀에서 가져와, 여기에 입력한 구간(%)에 따라 금액을 계산합니다. 계산된 내역은 파란색 누계 전용 박스에 표시됩니다.")
     
-    # 버튼 색상을 파란색 느낌으로 인라인 스타일 적용
     st.markdown('<style>#btn_add_cumul > button { background-color: #2a5298 !important; }</style>', unsafe_allow_html=True)
     st.markdown('<div id="btn_add_cumul">', unsafe_allow_html=True)
     if st.button("➕ 신규 누계 항목 추가", type="primary", use_container_width=True):
@@ -708,17 +731,17 @@ elif mode == "⚙️ 시스템 관리자":
             st.session_state['config'].append({
                 "name": f"신규 누계 항목 {len(st.session_state['config'])+1}",
                 "desc": "", "category": "cumulative", "type": "누계 시책", 
-                "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", "col_manager": "",
-                "col_val": "", "tiers": [(1000000, 100), (2000000, 200)]
+                "file": first_file, "col_code": "", "col_val": "", "col_prize": ""
             })
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    cumul_cfgs = [(i, c) for i, c in enumerate(st.session_state['config']) if c['category'] == 'cumulative']
+    cumul_cfgs = [(i, c) for i, c in enumerate(st.session_state['config']) if c.get('category') == 'cumulative']
     if not cumul_cfgs:
         st.info("현재 설정된 누계 항목이 없습니다.")
 
     for i, cfg in cumul_cfgs:
+        if 'col_prize' not in cfg: cfg['col_prize'] = ""
         st.markdown(f"<div style='background:#f0f4f8; padding:15px; border-radius:15px; border:1px solid #c7d2fe; margin-top:15px;'>", unsafe_allow_html=True)
         c_title, c_del = st.columns([8, 2])
         with c_title: st.markdown(f"**📘 {cfg['name']}**")
@@ -736,22 +759,14 @@ elif mode == "⚙️ 시스템 관리자":
             cols = st.session_state['raw_data'][cfg['file']].columns.tolist() if file_opts else []
             def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
-            cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
-            cfg['col_val'] = st.selectbox("해당 항목 누계 실적 컬럼", cols, index=get_idx(cfg.get('col_val', ''), cols), key=f"cval_{i}")
+            cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
+            cfg['col_val'] = st.selectbox("누계 실적 컬럼 (선택사항, 없으면 공란)", cols, index=get_idx(cfg.get('col_val', ''), cols), key=f"cval_{i}")
+            cfg['col_prize'] = st.selectbox("확정 시상금 컬럼 (필수)", cols, index=get_idx(cfg.get('col_prize', ''), cols), key=f"cprize_{i}")
 
         with col2:
-            st.write("📈 누계 실적 구간 설정 (누계금액, 지급률%)")
-            tier_str = "\n".join([f"{int(t[0])},{int(t[1])}" for t in cfg['tiers']])
-            tier_input = st.text_area("엔터로 줄바꿈", value=tier_str, height=150, key=f"tier_{i}")
-            try:
-                new_tiers = []
-                for line in tier_input.strip().split('\n'):
-                    if ',' in line:
-                        parts = line.split(',')
-                        new_tiers.append((float(parts[0].strip()), float(parts[1].strip())))
-                cfg['tiers'] = sorted(new_tiers, key=lambda x: x[0], reverse=True)
-            except:
-                st.error("형식이 올바르지 않습니다.")
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.info("✅ **구간 설정이 필요 없습니다.**\n\n지정한 파일에서 사번이 일치하는 사람의 **[누계 실적]**과 **[확정 시상금]**을 그대로 가져와 화면의 파란색 박스에 보여줍니다.")
+            
         st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -802,7 +817,7 @@ else:
                 
             df = st.session_state['raw_data'].get(cfg['file'])
             if df is not None:
-                search_name = df[cfg['col_name']].fillna('').astype(str).str.strip()
+                search_name = df[cfg.get('col_name', '')].fillna('').astype(str).str.strip() if cfg.get('col_name') else pd.Series()
                 name_match_condition = (search_name == user_name.strip())
                 
                 if branch_code_input.strip() == "0000": 
@@ -810,14 +825,14 @@ else:
                 else:
                     clean_code = branch_code_input.replace("지점", "").strip()
                     if clean_code:
-                        search_branch = df[cfg['col_branch']].fillna('').astype(str)
+                        search_branch = df[cfg.get('col_branch', '')].fillna('').astype(str) if cfg.get('col_branch') else pd.Series()
                         regex_pattern = rf"(?<!\d){clean_code}\s*지점"
                         match = df[name_match_condition & search_branch.str.contains(regex_pattern, regex=True)]
                     else:
                         match = pd.DataFrame()
                 
                 if not match.empty:
-                    if 'col_code' in cfg and cfg['col_code']:
+                    if cfg.get('col_code'):
                         for _, row in match.iterrows():
                             agent_code = safe_str(row[cfg['col_code']])
                             if agent_code: codes_found.add(agent_code)
