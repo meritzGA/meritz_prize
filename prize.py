@@ -30,21 +30,36 @@ if 'config' not in st.session_state:
 # --- 🎨 커스텀 CSS (메리츠 브랜드 컬러 & 라이트 테마 적용) ---
 st.markdown("""
 <style>
+    /* 전체 배경을 밝은 회색으로 고정 */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
-    span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
     
+    /* 🌟 글씨로 깨지는 Streamlit 기본 화살표/아이콘 완전 숨기기 🌟 */
+    span.material-symbols-rounded, 
+    span[data-testid="stIconMaterial"] {
+        display: none !important;
+    }
+    
+    /* 상단 메뉴 탭 스타일 */
     div[data-testid="stRadio"] > div {
         display: flex; justify-content: center; background-color: #ffffff; 
         padding: 10px; border-radius: 15px; margin-bottom: 20px; margin-top: 10px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e5e8eb;
     }
     
+    /* 🌟 메리츠 레드 타이틀 띠지 🌟 */
     .title-band {
         background-color: rgb(128, 0, 0); color: #ffffff; font-size: 1.4rem; font-weight: 800;
         text-align: center; padding: 16px; border-radius: 12px; margin-bottom: 24px;
         letter-spacing: -0.5px; box-shadow: 0 4px 10px rgba(128, 0, 0, 0.2);
     }
 
+    /* 스트림릿 입력 폼(Form) 카드로 만듦 */
+    [data-testid="stForm"] {
+        background-color: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;
+    }
+
+    /* 요약 카드 */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -56,6 +71,7 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
+    /* 개별 시책 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
@@ -63,17 +79,21 @@ st.markdown("""
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
     .toss-desc { font-size: 1.1rem; color: #8b95a1; margin-bottom: 24px; }
     
+    /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
     .data-label { color: #8b95a1; font-size: 1.1rem; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; }
     
+    /* 시상금 강조 행 */
     .prize-row { display: flex; justify-content: space-between; align-items: center; padding-top: 20px; margin-top: 12px; }
     .prize-label { color: #191f28; font-size: 1.4rem; font-weight: 700; }
     .prize-value { color: rgb(128, 0, 0); font-size: 2rem; font-weight: 800; } 
     
+    /* 기본 구분선 */
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
+    /* 🌟 시니어 입력창 확대 및 메리츠 컬러 버튼 🌟 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important;
@@ -85,8 +105,9 @@ st.markdown("""
     div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
     div.stButton > button {
-        font-size: 1.2rem !important; font-weight: 700 !important; height: 50px !important;
-        border-radius: 10px !important; color: white !important; border: none !important; width: 100%;
+        font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
+        border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
+        color: white !important; border: none !important; width: 100%; margin-top: 15px;
     }
     
     /* 삭제 버튼 전용 스타일 */
@@ -162,7 +183,7 @@ if mode == "⚙️ 시스템 관리자 모드":
     st.markdown("<hr style='margin:10px 0;'>", unsafe_allow_html=True)
     
     if not st.session_state['raw_data']:
-        st.info("현재 업로드된 파일이 없습니다. 위에 파일을 드래그 앤 드롭하여 추가해주세요.")
+        st.info("현재 업로드된 파일이 없습니다. 위에 파일을 추가해주세요.")
     else:
         for file_name in list(st.session_state['raw_data'].keys()):
             col_name, col_btn = st.columns([8, 2])
@@ -184,14 +205,12 @@ if mode == "⚙️ 시스템 관리자 모드":
     st.divider()
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
     
-    # 🌟 시책 추가 / 삭제 버튼을 항상 보이도록 상단에 배치 🌟
     col_add, col_del_all = st.columns(2)
     with col_add:
-        # 추가 버튼 스타일(파란색)
         st.markdown('<style>div.row-widget.stButton > button[kind="primary"] { background-color: #3182f6 !important; }</style>', unsafe_allow_html=True)
         if st.button("➕ 신규 시상 항목 추가", type="primary", use_container_width=True):
             if not st.session_state['raw_data']:
-                st.error("⚠️ 먼저 위에서 실적 파일을 1개 이상 업로드해야 시상을 추가할 수 있습니다.")
+                st.error("⚠️ 먼저 실적 파일을 1개 이상 업로드해야 시상을 추가할 수 있습니다.")
             else:
                 first_file = list(st.session_state['raw_data'].keys())[0]
                 st.session_state['config'].append({
@@ -216,7 +235,6 @@ if mode == "⚙️ 시스템 관리자 모드":
         st.info("현재 설정된 시상 항목이 없습니다. [➕ 신규 시상 항목 추가] 버튼을 눌러주세요.")
 
     for i, cfg in enumerate(st.session_state['config']):
-        # 기존 데이터 호환성 보장
         if 'desc' not in cfg: cfg['desc'] = ""
         if 'type' not in cfg: cfg['type'] = "구간 시책"
         if 'col_code' not in cfg: cfg['col_code'] = ""
@@ -290,10 +308,8 @@ if mode == "⚙️ 시스템 관리자 모드":
                 st.error("형식이 올바르지 않습니다.")
         st.markdown("</div>", unsafe_allow_html=True) 
 
-    # 서버 저장 버튼 (제일 아래 고정)
     if st.session_state['config']:
         st.markdown("<br>", unsafe_allow_html=True)
-        # 저장 버튼 스타일 (메리츠 레드)
         st.markdown('<style>div.row-widget.stButton > button[kind="secondary"] { background-color: rgb(128, 0, 0) !important; color: white !important; font-size: 1.5rem !important; height: 70px !important; }</style>', unsafe_allow_html=True)
         if st.button("✅ 모든 설정 완료 및 서버에 반영하기", use_container_width=True):
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
@@ -443,11 +459,83 @@ else:
                         "val": val_curr, "tier": tier_achieved, "rate": calc_rate
                     })
 
+            # ---------------------------------------------------------
+            # 💡 안전한 문자열 결합 방식 (들여쓰기 에러 방지)
+            # ---------------------------------------------------------
             if len(calculated_results) > 0:
-                summary_html = f"""<div class="summary-card">
-<div class="summary-label">{user_name} 팀장님의 확보한 총 시상금</div>
-<div class="summary-total">{total_prize_sum:,.0f}원</div>
-<div class="summary-divider"></div>"""
+                summary_html = (
+                    f"<div class='summary-card'>"
+                    f"<div class='summary-label'>{user_name} 팀장님의 확보한 총 시상금</div>"
+                    f"<div class='summary-total'>{total_prize_sum:,.0f}원</div>"
+                    f"<div class='summary-divider'></div>"
+                )
                 
                 for res in calculated_results:
                     if res['type'] in ["구간", "브릿지1"]:
+                        summary_html += (
+                            f"<div class='data-row' style='padding: 6px 0;'>"
+                            f"<span class='summary-item-name'>{res['name']}</span>"
+                            f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
+                            f"</div>"
+                        )
+                    else: 
+                        summary_html += (
+                            f"<div class='data-row' style='padding: 6px 0;'>"
+                            f"<span class='summary-item-name'>{res['name']}</span>"
+                            f"<span class='summary-item-val' style='color:rgba(255,255,255,0.7);'>{res['tier']:,.0f}원 구간 확보</span>"
+                            f"</div>"
+                        )
+                summary_html += "</div>"
+                st.markdown(summary_html, unsafe_allow_html=True)
+                
+                for res in calculated_results:
+                    if res['type'] == "구간":
+                        card_html = (
+                            f"<div class='toss-card'>"
+                            f"<div class='toss-title'>{res['name']}</div>"
+                            f"<div class='toss-desc'>{res['desc']}</div>"
+                            f"<div class='data-row'><span class='data-label'>현재 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
+                            f"<div class='data-row'><span class='data-label'>도달한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div>"
+                            f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                            f"<div class='toss-divider'></div>"
+                            f"<div class='prize-row'>"
+                            f"<span class='prize-label'>확보한 시상금</span>"
+                            f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
+                            f"</div></div>"
+                        )
+                    elif res['type'] == "브릿지1":
+                        card_html = (
+                            f"<div class='toss-card'>"
+                            f"<div class='toss-title'>{res['name']}</div>"
+                            f"<div class='toss-desc'>{res['desc']}</div>"
+                            f"<div class='data-row'>"
+                            f"<span class='data-label'>전월 실적 (인정구간)</span>"
+                            f"<div style='text-align:right;'>"
+                            f"<div class='data-value'>{res['val_prev']:,.0f}원</div>"
+                            f"<div class='sub-data'>({res['tier_prev']:,.0f}원 구간)</div>"
+                            f"</div></div>"
+                            f"<div class='data-row'>"
+                            f"<span class='data-label'>당월 실적 (목표 {res['curr_req']:,.0f}원)</span>"
+                            f"<span class='data-value'>{res['val_curr']:,.0f}원</span>"
+                            f"</div>"
+                            f"<div class='data-row'><span class='data-label'>적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                            f"<div class='toss-divider'></div>"
+                            f"<div class='prize-row'>"
+                            f"<span class='prize-label'>확보한 시상금</span>"
+                            f"<span class='prize-value'>{res['prize']:,.0f}원</span>"
+                            f"</div></div>"
+                        )
+                    elif res['type'] == "브릿지2":
+                        card_html = (
+                            f"<div class='toss-card'>"
+                            f"<div class='toss-title'>{res['name']}</div>"
+                            f"<div class='toss-desc'>{res['desc']}</div>"
+                            f"<div class='data-row'><span class='data-label'>당월 누적 실적</span><span class='data-value'>{res['val']:,.0f}원</span></div>"
+                            f"<div class='data-row'><span class='data-label'>예상 지급률</span><span class='data-value'>{res['rate']:g}%</span></div>"
+                            f"<div class='toss-divider'></div>"
+                            f"<div class='prize-row'>"
+                            f"<span class='prize-label'>차월 확보한 브릿지 구간</span>"
+                            f"<span class='prize-value'>{res['tier']:,.0f}원</span>"
+                            f"</div></div>"
+                        )
+                    st.markdown(card_html, unsafe_allow_html=True)
