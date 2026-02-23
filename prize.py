@@ -39,9 +39,12 @@ def safe_str(val):
     if s.endswith('.0'): s = s[:-2]
     return s
 
-# --- 🎨 커스텀 CSS ---
+# --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응) ---
 st.markdown("""
 <style>
+    /* ========================================= */
+    /* ☀️ 기본 모드 (Light Mode) CSS             */
+    /* ========================================= */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
     
@@ -59,26 +62,37 @@ st.markdown("""
 
     [data-testid="stForm"] { background-color: transparent; border: none; padding: 0; margin-bottom: 24px; }
 
-    /* 기본 구간 시책 요약 카드 (레드) */
+    /* 공통 텍스트 타이틀 클래스 */
+    .admin-title { color: #191f28; font-weight: 800; font-size: 1.8rem; margin-top: 20px; }
+    .sub-title { color: #191f28; font-size: 1.4rem; margin-top: 30px; font-weight: 700; }
+    .config-title { color: #191f28; font-size: 1.3rem; margin: 0; font-weight: 700; }
+    .main-title { color: #191f28; font-weight: 800; font-size: 1.3rem; margin-bottom: 15px; }
+    .blue-title { color: #1e3c72; font-size: 1.4rem; margin-top: 10px; font-weight: 800; }
+    .agent-title { color: #3182f6; font-weight: 800; font-size: 1.5rem; margin-top: 0; text-align: center; }
+
+    /* 공통 박스 클래스 */
+    .config-box { background: #f9fafb; padding: 15px; border-radius: 15px; border: 1px solid #e5e8eb; margin-top: 15px; }
+    .config-box-blue { background: #f0f4f8; padding: 15px; border-radius: 15px; border: 1px solid #c7d2fe; margin-top: 15px; }
+    .detail-box { background: #ffffff; padding: 20px; border-radius: 20px; border: 2px solid #e5e8eb; margin-top: 10px; margin-bottom: 30px; }
+
+    /* 시책 요약 카드 (상단) */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
         box-shadow: 0 10px 25px rgba(128, 0, 0, 0.25);
     }
-    
-    /* 월간 누계 전용 요약 카드 (딥 네이비 파란색) */
     .cumulative-card { 
         background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
         box-shadow: 0 10px 25px rgba(30, 60, 114, 0.25);
     }
-    
     .summary-label { color: rgba(255,255,255,0.85); font-size: 1.15rem; font-weight: 600; margin-bottom: 8px; }
     .summary-total { color: #ffffff; font-size: 2.6rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 24px; white-space: nowrap; word-break: keep-all; }
     .summary-item-name { color: rgba(255,255,255,0.95); font-size: 1.15rem; }
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; white-space: nowrap; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
+    /* 개별 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
@@ -90,6 +104,7 @@ st.markdown("""
     .data-label { color: #8b95a1; font-size: 1.1rem; word-break: keep-all; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
     
+    /* 상위 구간 부족 금액 강조 디자인 */
     .shortfall-row { background-color: #fff0f0; padding: 14px; border-radius: 12px; margin-top: 15px; margin-bottom: 5px; border: 2px dashed #ff4b4b; text-align: center; }
     .shortfall-text { color: #d9232e; font-size: 1.2rem; font-weight: 800; word-break: keep-all; }
 
@@ -100,17 +115,11 @@ st.markdown("""
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 🌟 누계 전용 세로 정렬 박스 (한 줄 꽉 차게) 스타일 🌟 */
+    /* 누계 전용 세로 정렬 박스 */
     .cumul-stack-box {
-        background: #ffffff; 
-        border: 1px solid #e5e8eb;
-        border-left: 6px solid #2a5298; 
-        border-radius: 16px; 
-        padding: 20px 24px; 
-        margin-bottom: 16px; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
+        background: #ffffff; border: 1px solid #e5e8eb; border-left: 6px solid #2a5298; 
+        border-radius: 16px; padding: 20px 24px; margin-bottom: 16px; 
+        display: flex; justify-content: space-between; align-items: center;
         box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     }
     .cumul-stack-info { display: flex; flex-direction: column; gap: 4px; }
@@ -118,12 +127,15 @@ st.markdown("""
     .cumul-stack-val { font-size: 1.05rem; color: #8b95a1; }
     .cumul-stack-prize { font-size: 1.6rem; color: #d9232e; font-weight: 800; text-align: right; white-space: nowrap; }
     
+    /* 입력 컴포넌트 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
     }
     div[data-testid="stSelectbox"] > div { background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; }
+    div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
+    /* 버튼 */
     div.stButton > button[kind="primary"] {
         font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important; color: white !important; border: none !important; width: 100%; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2) !important;
@@ -132,6 +144,54 @@ st.markdown("""
     div.stButton > button[kind="secondary"] {
         font-size: 1.2rem !important; font-weight: 700 !important; min-height: 60px !important; height: auto !important; padding: 10px !important;
         border-radius: 12px !important; background-color: #e8eaed !important; color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; margin-top: 5px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; white-space: normal !important; 
+    }
+
+    /* ========================================= */
+    /* 🌙 다크 모드 (Dark Mode) CSS              */
+    /* ========================================= */
+    @media (prefers-color-scheme: dark) {
+        /* 전체 배경 및 텍스트 반전 */
+        [data-testid="stAppViewContainer"] { background-color: #121212 !important; color: #e0e0e0 !important; }
+        label, p, .stMarkdown p { color: #e0e0e0 !important; }
+        
+        /* 상단 메뉴 탭 */
+        div[data-testid="stRadio"] > div { background-color: #1e1e1e !important; border-color: #333 !important; }
+        
+        /* 공통 텍스트 타이틀 반전 */
+        .admin-title, .sub-title, .config-title, .main-title { color: #ffffff !important; }
+        .blue-title, .agent-title { color: #66b2ff !important; }
+        
+        /* 공통 박스 반전 */
+        .config-box { background-color: #1a1a1a !important; border-color: #333 !important; }
+        .config-box-blue { background-color: #121928 !important; border-color: #2a5298 !important; }
+        .detail-box { background-color: #121212 !important; border-color: #333 !important; }
+        
+        /* 개별 상세 카드 반전 */
+        .toss-card { background-color: #1e1e1e !important; border-color: #333 !important; box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important; }
+        .toss-title { color: #ffffff !important; }
+        .toss-desc { color: #ff6b6b !important; }
+        .data-label { color: #a0aab5 !important; }
+        .data-value { color: #ffffff !important; }
+        .prize-label { color: #ffffff !important; }
+        .prize-value { color: #ff4b4b !important; }
+        .toss-divider { background-color: #333 !important; }
+        
+        /* 상위 구간 부족 금액 강조 디자인 반전 */
+        .shortfall-row { background-color: #2a1215 !important; border-color: #ff4b4b !important; }
+        .shortfall-text { color: #ff6b6b !important; }
+        
+        /* 누계 전용 세로 정렬 박스 반전 */
+        .cumul-stack-box { background-color: #1e1e1e !important; border-color: #333 !important; border-left-color: #4da3ff !important; box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important; }
+        .cumul-stack-title { color: #4da3ff !important; }
+        .cumul-stack-val { color: #a0aab5 !important; }
+        .cumul-stack-prize { color: #ff4b4b !important; }
+        
+        /* 입력 컴포넌트 반전 */
+        div[data-testid="stTextInput"] input { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
+        div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
+        
+        /* 회색/보조 버튼 반전 */
+        div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
     }
     
     @media (max-width: 450px) {
@@ -286,7 +346,6 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     share_text += f"💰 총 합산 시상금: {total_prize_sum:,.0f}원\n"
     share_text += "────────────────\n"
 
-    # --- 🔴 1. 주차/브릿지 요약 및 카드 ---
     if weekly_res:
         summary_html = (
             f"<div class='summary-card'>"
@@ -365,7 +424,6 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 
             st.markdown(card_html, unsafe_allow_html=True)
 
-    # --- 🔵 2. 월간 누계 시상 (세로형 개별 박스 쌓기) ---
     if cumul_res:
         cumul_html = (
             f"<div class='cumulative-card'>"
@@ -381,9 +439,8 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
         cumul_html += "</div>"
         st.markdown(cumul_html, unsafe_allow_html=True)
         
-        st.markdown("<h3 style='color:#1e3c72; font-weight:800; margin-top:20px; margin-bottom:15px;'>📈 세부 항목별 시상금</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 class='blue-title'>📈 세부 항목별 시상금</h3>", unsafe_allow_html=True)
         
-        # 🌟 가로 한 줄 전체를 차지하며 세로로 쌓이는 박스 UI 🌟
         stack_html = ""
         for res in cumul_res:
             stack_html += (
@@ -398,7 +455,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
         st.markdown(stack_html, unsafe_allow_html=True)
 
     if show_share_text:
-        st.markdown("<h4 style='color:#191f28; font-weight:700; margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 class='main-title' style='margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
         st.info("💡 아래 텍스트 박스 안의 글자를 복사해서, 해당 설계사의 카톡 창에 붙여넣기 하시면 바로 시상 내용을 보여줄 수 있습니다.")
         st.text_area("카카오톡 복사용 텍스트", value=share_text, height=350)
 
@@ -432,7 +489,7 @@ if mode == "👥 매니저 관리":
         step = st.session_state.get('mgr_step', 'main')
         
         if step == 'main':
-            st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 class='main-title'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("📁 구간실적 관리", use_container_width=True):
@@ -451,7 +508,7 @@ if mode == "👥 매니저 관리":
                 st.rerun()
             
             cat = st.session_state.mgr_category
-            st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
             agents = {}
             for cfg in st.session_state['config']:
@@ -506,7 +563,7 @@ if mode == "👥 매니저 관리":
             min_v = st.session_state.mgr_min_v
             max_v = st.session_state.mgr_max_v
             
-            st.markdown(f"<h3 style='color:#191f28; font-weight:800; font-size:1.3rem;'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 class='main-title'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
             st.info("💡 이름을 클릭하면 상세 실적을 확인하고 카톡으로 전송할 수 있습니다.")
             
             agents = {}
@@ -564,8 +621,8 @@ if mode == "👥 매니저 관리":
             name = st.session_state.mgr_selected_name
             cat = st.session_state.mgr_category
             
-            st.markdown(f"<div style='background:#ffffff; padding:20px; border-radius:20px; border:2px solid #e5e8eb; margin-top:10px; margin-bottom:30px;'>", unsafe_allow_html=True)
-            st.markdown(f"<h4 style='color:#3182f6; font-weight:800; font-size:1.5rem; margin-top:0; text-align:center;'>👤 {name} 설계사님</h4>", unsafe_allow_html=True)
+            st.markdown(f"<div class='detail-box'>", unsafe_allow_html=True)
+            st.markdown(f"<h4 class='agent-title'>👤 {name} 설계사님</h4>", unsafe_allow_html=True)
             
             calc_results, total_prize = calculate_agent_performance(code)
             render_ui_cards(name, calc_results, total_prize, show_share_text=True)
@@ -580,7 +637,7 @@ if mode == "👥 매니저 관리":
 # 🔒 3. 시스템 관리자 모드
 # ==========================================
 elif mode == "⚙️ 시스템 관리자":
-    st.markdown("<h2 style='color:#191f28; font-weight:800; font-size:1.8rem; margin-top: 20px;'>관리자 설정</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 class='admin-title'>관리자 설정</h2>", unsafe_allow_html=True)
     
     admin_pw = st.text_input("관리자 비밀번호를 입력하세요", type="password")
     if admin_pw != "meritz0085":
@@ -589,7 +646,7 @@ elif mode == "⚙️ 시스템 관리자":
         
     st.success("인증 성공! 변경 사항은 가장 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
-    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='sub-title'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
     
     if uploaded_files:
@@ -646,20 +703,29 @@ elif mode == "⚙️ 시스템 관리자":
     # 🌟 챕터 1: 주차/브릿지 시상 항목 관리
     # ---------------------------------------------------------
     st.divider()
-    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🏆 2. 주차/브릿지 시상 항목 관리</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='sub-title' style='margin-top:10px;'>🏆 2. 주차/브릿지 시상 항목 관리</h3>", unsafe_allow_html=True)
     
-    if st.button("➕ 신규 주차/브릿지 시상 추가", type="primary", use_container_width=True):
-        if not st.session_state['raw_data']:
-            st.error("⚠️ 먼저 실적 파일을 1개 이상 업로드해야 시상을 추가할 수 있습니다.")
-        else:
-            first_file = list(st.session_state['raw_data'].keys())[0]
-            st.session_state['config'].append({
-                "name": f"신규 주차 시책 {len(st.session_state['config'])+1}",
-                "desc": "", "category": "weekly", "type": "구간 시책", 
-                "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", "col_manager": "",
-                "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
-                "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
-            })
+    col_add, col_del_all = st.columns(2)
+    with col_add:
+        if st.button("➕ 신규 주차/브릿지 시상 추가", type="primary", use_container_width=True):
+            if not st.session_state['raw_data']:
+                st.error("⚠️ 먼저 실적 파일을 1개 이상 업로드해야 시상을 추가할 수 있습니다.")
+            else:
+                first_file = list(st.session_state['raw_data'].keys())[0]
+                st.session_state['config'].append({
+                    "name": f"신규 주차 시책 {len(st.session_state['config'])+1}",
+                    "desc": "", "category": "weekly", "type": "구간 시책", 
+                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", "col_manager": "",
+                    "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
+                    "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
+                })
+                st.rerun()
+                
+    with col_del_all:
+        if st.button("🗑️ 모든 시상 항목 일괄 삭제", use_container_width=True):
+            st.session_state['config'].clear()
+            with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
+                json.dump([], f, ensure_ascii=False)
             st.rerun()
 
     weekly_cfgs = [(i, c) for i, c in enumerate(st.session_state['config']) if c['category'] == 'weekly']
@@ -668,12 +734,14 @@ elif mode == "⚙️ 시스템 관리자":
 
     for i, cfg in weekly_cfgs:
         if 'desc' not in cfg: cfg['desc'] = ""
-        st.markdown(f"<div style='background:#f9fafb; padding:15px; border-radius:15px; border:1px solid #e5e8eb; margin-top:15px;'>", unsafe_allow_html=True)
+        st.markdown(f"<div class='config-box'>", unsafe_allow_html=True)
         c_title, c_del = st.columns([8, 2])
-        with c_title: st.markdown(f"**📌 {cfg['name']}**")
+        with c_title: st.markdown(f"<h3 class='config-title'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
         with c_del:
-            if st.button("삭제", key=f"del_cfg_{i}", use_container_width=True):
+            if st.button("개별 삭제", key=f"del_cfg_{i}", use_container_width=True):
                 st.session_state['config'].pop(i)
+                with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
+                    json.dump(st.session_state['config'], f, ensure_ascii=False)
                 st.rerun()
         
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
@@ -724,14 +792,12 @@ elif mode == "⚙️ 시스템 관리자":
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # 🌟 챕터 2: 월간 누계 시상 항목 관리 (간소화) 🌟
+    # 🌟 챕터 2: 월간 누계 시상 항목 관리
     # ---------------------------------------------------------
     st.divider()
-    st.markdown("<h3 style='color:#1e3c72; font-size:1.4rem; margin-top:10px;'>📈 3. 월간 누계 시상 항목 관리</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='blue-title'>📈 3. 월간 누계 시상 항목 관리</h3>", unsafe_allow_html=True)
     
-    st.markdown('<style>#btn_add_cumul > button { background-color: #2a5298 !important; }</style>', unsafe_allow_html=True)
-    st.markdown('<div id="btn_add_cumul">', unsafe_allow_html=True)
-    if st.button("➕ 신규 누계 항목 추가", type="primary", use_container_width=True):
+    if st.button("➕ 신규 누계 항목 추가", type="primary", use_container_width=True, key="add_cumul"):
         if not st.session_state['raw_data']:
             st.error("⚠️ 먼저 실적 파일을 1개 이상 업로드해야 합니다.")
         else:
@@ -742,7 +808,6 @@ elif mode == "⚙️ 시스템 관리자":
                 "file": first_file, "col_code": "", "col_val": "", "col_prize": ""
             })
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     cumul_cfgs = [(i, c) for i, c in enumerate(st.session_state['config']) if c.get('category') == 'cumulative']
     if not cumul_cfgs:
@@ -750,11 +815,11 @@ elif mode == "⚙️ 시스템 관리자":
 
     for i, cfg in cumul_cfgs:
         if 'col_prize' not in cfg: cfg['col_prize'] = ""
-        st.markdown(f"<div style='background:#f0f4f8; padding:15px; border-radius:15px; border:1px solid #c7d2fe; margin-top:15px;'>", unsafe_allow_html=True)
+        st.markdown(f"<div class='config-box-blue'>", unsafe_allow_html=True)
         c_title, c_del = st.columns([8, 2])
-        with c_title: st.markdown(f"**📘 {cfg['name']}**")
+        with c_title: st.markdown(f"<h3 class='config-title' style='color:#1e3c72;'>📘 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
         with c_del:
-            if st.button("삭제", key=f"del_cfg_{i}", use_container_width=True):
+            if st.button("개별 삭제", key=f"del_cfg_{i}", use_container_width=True):
                 st.session_state['config'].pop(i)
                 st.rerun()
         
@@ -779,7 +844,7 @@ elif mode == "⚙️ 시스템 관리자":
 
 
     st.divider()
-    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🖼️ 4. 안내 리플렛(이미지) 등록</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='sub-title' style='margin-top:10px;'>🖼️ 4. 안내 리플렛(이미지) 등록</h3>", unsafe_allow_html=True)
     st.info("💡 실적 조회 결과 맨 아래에 보여줄 상품 안내장이나 리플렛 이미지를 등록할 수 있습니다.")
     
     leaflet_file = st.file_uploader("리플렛 이미지 업로드 (JPG, PNG)", type=['jpg', 'jpeg', 'png'])
@@ -810,7 +875,7 @@ elif mode == "⚙️ 시스템 관리자":
 # ==========================================
 else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
-    st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 class='main-title'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     
     user_name = st.text_input("본인 이름을 입력하세요", placeholder="예: 홍길동")
     branch_code_input = st.text_input("지점별 코드", placeholder="예: 1지점은 1, 11지점은 11 입력")
