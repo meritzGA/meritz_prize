@@ -155,7 +155,6 @@ def calculate_agent_performance(target_code):
         cat = cfg.get('category', 'weekly')
         p_type = cfg.get('type', '구간 시책')
         
-        # 1. 주차/브릿지 시상 계산 (기존 유지)
         if cat == 'weekly':
             if "1기간" in p_type: 
                 raw_prev = match_df[cfg['col_val_prev']].values[0]
@@ -241,7 +240,6 @@ def calculate_agent_performance(target_code):
                     "next_tier": next_tier, "shortfall": shortfall
                 })
         
-        # 🌟 2. 월간 누계 시상 계산 (데이터에서 실적/시상금 바로 끌어오기) 🌟
         elif cat == 'cumulative':
             col_val = cfg.get('col_val', '')
             raw_val = match_df[col_val].values[0] if col_val and col_val in match_df.columns else 0
@@ -353,7 +351,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 
             st.markdown(card_html, unsafe_allow_html=True)
 
-    # --- 🔵 2. 월간 누계 시상 (파란 박스 / 가로 배열) ---
+    # --- 🔵 2. 월간 누계 시상 (파란 박스 / 가로 배열) - 들여쓰기 버그 수정 완료 ---
     if cumul_res:
         cumul_html = (
             f"<div class='cumulative-card'>"
@@ -364,28 +362,23 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
         
         share_text += f"\n🏆 [월간 확정 누계 시상]\n"
         for res in cumul_res:
-            cumul_html += (
-                f"<div class='data-row' style='padding: 6px 0;'>"
-                f"<span class='summary-item-name'>{res['name']}</span>"
-                f"<span class='summary-item-val'>{res['prize']:,.0f}원</span>"
-                f"</div>"
-            )
+            cumul_html += f"<div class='data-row' style='padding: 6px 0;'><span class='summary-item-name'>{res['name']}</span><span class='summary-item-val'>{res['prize']:,.0f}원</span></div>"
             share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (누계 {res['val']:,.0f}원)\n"
         cumul_html += "</div>"
         st.markdown(cumul_html, unsafe_allow_html=True)
         
         st.markdown("<h3 style='color:#1e3c72; font-weight:800; margin-top:20px; margin-bottom:15px;'>📈 세부 항목별 시상금</h3>", unsafe_allow_html=True)
         
-        # 가로 한 줄 정렬 박스 렌더링
+        # 🌟 띄어쓰기로 인한 마크다운 파싱 오류를 방지하기 위해 한 줄로 완벽히 묶음 처리 🌟
         flex_html = "<div class='cumul-flex-container'>"
         for res in cumul_res:
-            flex_html += f"""
-            <div class='cumul-flex-box'>
-                <div style='font-size: 1.1rem; color: #1e3c72; font-weight: 700; margin-bottom: 8px;'>{res['name']}</div>
-                <div style='font-size: 0.95rem; color: #8b95a1; margin-bottom: 4px;'>누계실적: {res['val']:,.0f}원</div>
-                <div style='font-size: 1.4rem; color: #d9232e; font-weight: 800;'>{res['prize']:,.0f}원</div>
-            </div>
-            """
+            flex_html += (
+                f"<div class='cumul-flex-box'>"
+                f"<div style='font-size: 1.1rem; color: #1e3c72; font-weight: 700; margin-bottom: 8px;'>{res['name']}</div>"
+                f"<div style='font-size: 0.95rem; color: #8b95a1; margin-bottom: 4px;'>누계실적: {res['val']:,.0f}원</div>"
+                f"<div style='font-size: 1.4rem; color: #d9232e; font-weight: 800;'>{res['prize']:,.0f}원</div>"
+                f"</div>"
+            )
         flex_html += "</div>"
         st.markdown(flex_html, unsafe_allow_html=True)
 
@@ -716,7 +709,7 @@ elif mode == "⚙️ 시스템 관리자":
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # 🌟 챕터 2: 월간 누계 시상 항목 관리 (간소화) 🌟
+    # 🌟 챕터 2: 월간 누계 시상 항목 관리
     # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 style='color:#1e3c72; font-size:1.4rem; margin-top:10px;'>📈 3. 월간 누계 시상 항목 관리</h3>", unsafe_allow_html=True)
@@ -812,7 +805,6 @@ else:
 
     if user_name and branch_code_input:
         for i, cfg in enumerate(st.session_state['config']):
-            # 이름 검색은 주로 주차시상(weekly)의 성명/지점 컬럼을 기준으로 잡습니다.
             if cfg.get('category') == 'cumulative': continue
                 
             df = st.session_state['raw_data'].get(cfg['file'])
