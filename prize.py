@@ -77,7 +77,9 @@ st.markdown("""
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
     }
     .toss-title { font-size: 1.6rem; font-weight: 700; color: #191f28; margin-bottom: 6px; letter-spacing: -0.5px; }
-    .toss-desc { font-size: 1.1rem; color: #8b95a1; margin-bottom: 24px; }
+    
+    /* 🌟 사용자 화면: 시책 설명 텍스트를 진한 파란색 굵은 글씨로 변경 🌟 */
+    .toss-desc { font-size: 1.1rem; color: #004080; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.3px; }
     
     /* 데이터 행 */
     .data-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
@@ -261,9 +263,8 @@ if mode == "⚙️ 시스템 관리자 모드":
         
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
         
-        # 🌟 요구사항 1번: 시책 설명 폰트를 진한 파란색으로 변경 (크기는 유지) 🌟
-        st.markdown("<p style='color: #004080; font-weight: 700; margin-bottom: -15px; font-size: 1rem;'>시책 설명 (적용 기간 등)</p>", unsafe_allow_html=True)
-        cfg['desc'] = st.text_input("시책 설명", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}", label_visibility="collapsed")
+        # 🌟 관리자 모드: 시책 설명 입력창 (원래대로 기본 텍스트 디자인 복구) 🌟
+        cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
         
         cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 구간 확보)"], 
                                index=0 if "구간" in cfg['type'] else (1 if "1기간" in cfg['type'] else 2), horizontal=True, key=f"type_{i}")
@@ -282,7 +283,6 @@ if mode == "⚙️ 시스템 관리자 모드":
             st.info("💡 동명이인 식별을 위해 아래 3개 컬럼을 정확히 지정해주세요.")
             cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
-            # 🌟 요구사항 2번: 동명이인 분리용 설계사코드(사번)
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
             
             if "구간" in cfg['type'] or "2기간" in cfg['type']:
@@ -312,7 +312,7 @@ if mode == "⚙️ 시스템 관리자 모드":
         st.markdown("</div>", unsafe_allow_html=True) 
 
     # ---------------------------------------------------------
-    # 🌟 [영역 3] 리플렛(안내 이미지) 관리 🌟
+    # 🌟 [영역 3] 리플렛(안내 이미지) 관리
     # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🖼️ 3. 안내 리플렛(이미지) 등록</h3>", unsafe_allow_html=True)
@@ -381,7 +381,6 @@ else:
                 
                 if not match.empty:
                     matched_configs[i] = match
-                    # 🌟 동명이인 확인을 위해 설계사 코드 수집 🌟
                     if 'col_code' in cfg and cfg['col_code']:
                         for _, row in match.iterrows():
                             agent_code = str(row[cfg['col_code']]).strip()
@@ -413,7 +412,7 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                # 사용자가 콤보박스에서 설계사 코드를 선택한 경우 데이터 완벽 분리
+                # 사용자가 콤보박스에서 설계사 코드를 선택한 경우 데이터 필터링
                 if needs_disambiguation and selected_code and 'col_code' in cfg and cfg['col_code']:
                     match_df = match_df[match_df[cfg['col_code']].fillna('').astype(str).str.strip() == selected_code]
                 
@@ -485,7 +484,6 @@ else:
                         "val": val_curr, "tier": tier_achieved, "rate": calc_rate
                     })
 
-            # 안전한 문자열 묶음 방식 처리 (들여쓰기 에러 방지)
             if len(calculated_results) > 0:
                 summary_html = (
                     f"<div class='summary-card'>"
@@ -564,7 +562,7 @@ else:
                         )
                     st.markdown(card_html, unsafe_allow_html=True)
                 
-                # 🌟 요구사항 3번: 결과 출력 맨 마지막에 등록된 리플렛 이미지 띄우기 🌟
+                # 🌟 등록된 리플렛 이미지 띄우기 🌟
                 user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
                 if os.path.exists(user_leaflet_path):
                     st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
