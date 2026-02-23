@@ -100,13 +100,23 @@ st.markdown("""
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 누계 전용 가로 박스 (한 줄 정렬) 스타일 */
-    .cumul-flex-container {
-        display: flex; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 30px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 5px;
+    /* 🌟 누계 전용 세로 정렬 박스 (한 줄 꽉 차게) 스타일 🌟 */
+    .cumul-stack-box {
+        background: #ffffff; 
+        border: 1px solid #e5e8eb;
+        border-left: 6px solid #2a5298; 
+        border-radius: 16px; 
+        padding: 20px 24px; 
+        margin-bottom: 16px; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
     }
-    .cumul-flex-box {
-        flex: 1; min-width: 0; background: #ffffff; border: 2px solid #2a5298; border-radius: 15px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(42, 82, 152, 0.08);
-    }
+    .cumul-stack-info { display: flex; flex-direction: column; gap: 4px; }
+    .cumul-stack-title { font-size: 1.25rem; color: #1e3c72; font-weight: 800; word-break: keep-all; }
+    .cumul-stack-val { font-size: 1.05rem; color: #8b95a1; }
+    .cumul-stack-prize { font-size: 1.6rem; color: #d9232e; font-weight: 800; text-align: right; white-space: nowrap; }
     
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
@@ -133,6 +143,10 @@ st.markdown("""
         .data-value { font-size: 1.15rem !important; }
         .toss-title { font-size: 1.4rem !important; }
         .shortfall-text { font-size: 1.05rem !important; }
+        .cumul-stack-box { padding: 16px 20px; flex-direction: row; }
+        .cumul-stack-title { font-size: 1.15rem; }
+        .cumul-stack-val { font-size: 0.95rem; }
+        .cumul-stack-prize { font-size: 1.4rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -351,7 +365,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 
             st.markdown(card_html, unsafe_allow_html=True)
 
-    # --- 🔵 2. 월간 누계 시상 (파란 박스 / 가로 배열) - 들여쓰기 버그 수정 완료 ---
+    # --- 🔵 2. 월간 누계 시상 (세로형 개별 박스 쌓기) ---
     if cumul_res:
         cumul_html = (
             f"<div class='cumulative-card'>"
@@ -369,18 +383,19 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
         
         st.markdown("<h3 style='color:#1e3c72; font-weight:800; margin-top:20px; margin-bottom:15px;'>📈 세부 항목별 시상금</h3>", unsafe_allow_html=True)
         
-        # 🌟 띄어쓰기로 인한 마크다운 파싱 오류를 방지하기 위해 한 줄로 완벽히 묶음 처리 🌟
-        flex_html = "<div class='cumul-flex-container'>"
+        # 🌟 가로 한 줄 전체를 차지하며 세로로 쌓이는 박스 UI 🌟
+        stack_html = ""
         for res in cumul_res:
-            flex_html += (
-                f"<div class='cumul-flex-box'>"
-                f"<div style='font-size: 1.1rem; color: #1e3c72; font-weight: 700; margin-bottom: 8px;'>{res['name']}</div>"
-                f"<div style='font-size: 0.95rem; color: #8b95a1; margin-bottom: 4px;'>누계실적: {res['val']:,.0f}원</div>"
-                f"<div style='font-size: 1.4rem; color: #d9232e; font-weight: 800;'>{res['prize']:,.0f}원</div>"
+            stack_html += (
+                f"<div class='cumul-stack-box'>"
+                f"<div class='cumul-stack-info'>"
+                f"<span class='cumul-stack-title'>{res['name']}</span>"
+                f"<span class='cumul-stack-val'>누계실적: {res['val']:,.0f}원</span>"
+                f"</div>"
+                f"<div class='cumul-stack-prize'>{res['prize']:,.0f}원</div>"
                 f"</div>"
             )
-        flex_html += "</div>"
-        st.markdown(flex_html, unsafe_allow_html=True)
+        st.markdown(stack_html, unsafe_allow_html=True)
 
     if show_share_text:
         st.markdown("<h4 style='color:#191f28; font-weight:700; margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
@@ -709,7 +724,7 @@ elif mode == "⚙️ 시스템 관리자":
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # 🌟 챕터 2: 월간 누계 시상 항목 관리
+    # 🌟 챕터 2: 월간 누계 시상 항목 관리 (간소화) 🌟
     # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 style='color:#1e3c72; font-size:1.4rem; margin-top:10px;'>📈 3. 월간 누계 시상 항목 관리</h3>", unsafe_allow_html=True)
