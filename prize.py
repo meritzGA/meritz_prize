@@ -107,7 +107,7 @@ st.markdown("""
     div.stButton > button {
         font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important;
-        color: white !important; border: none !important; width: 100%; margin-top: 15px;
+        color: white !important; border: none !important; width: 100%; margin-top: 15px; margin-bottom: 25px;
     }
     
     /* 삭제 버튼 전용 스타일 */
@@ -137,7 +137,7 @@ if mode == "⚙️ 시스템 관리자 모드":
     st.success("인증 성공! 변경 사항은 가장 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
     # ---------------------------------------------------------
-    # [영역 1] 파일 업로드 및 관리 (독립된 영역)
+    # [영역 1] 파일 업로드 및 관리
     # ---------------------------------------------------------
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:30px;'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
@@ -200,7 +200,7 @@ if mode == "⚙️ 시스템 관리자 모드":
     st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # [영역 2] 시책 항목 관리 (파일 관리와 완전 독립)
+    # [영역 2] 시책 항목 관리
     # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🏆 2. 시상(시책) 항목 추가 및 관리</h3>", unsafe_allow_html=True)
@@ -216,7 +216,7 @@ if mode == "⚙️ 시스템 관리자 모드":
                 st.session_state['config'].append({
                     "name": f"신규 시책 {len(st.session_state['config'])+1}",
                     "desc": "", "type": "구간 시책", 
-                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", 
+                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "",
                     "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
                     "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
                 })
@@ -239,7 +239,6 @@ if mode == "⚙️ 시스템 관리자 모드":
         if 'type' not in cfg: cfg['type'] = "구간 시책"
         if 'col_code' not in cfg: cfg['col_code'] = ""
         if 'col_branch' not in cfg: cfg['col_branch'] = cfg.get('col_phone', '') 
-        if 'col_agency' not in cfg: cfg['col_agency'] = ""
         if 'col_val_prev' not in cfg: cfg['col_val_prev'] = ""
         if 'col_val_curr' not in cfg: cfg['col_val_curr'] = ""
         if 'curr_req' not in cfg: cfg['curr_req'] = 100000.0
@@ -261,7 +260,11 @@ if mode == "⚙️ 시스템 관리자 모드":
         st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
         
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
-        cfg['desc'] = st.text_input("시책 설명 (적용 기간 등)", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}")
+        
+        # 🌟 요구사항 1번: 시책 설명 폰트를 진한 파란색으로 변경 (크기는 유지) 🌟
+        st.markdown("<p style='color: #004080; font-weight: 700; margin-bottom: -15px; font-size: 1rem;'>시책 설명 (적용 기간 등)</p>", unsafe_allow_html=True)
+        cfg['desc'] = st.text_input("시책 설명", value=cfg.get('desc', ''), placeholder="예: 2/1 ~ 2/15 인보험 적용", key=f"desc_{i}", label_visibility="collapsed")
+        
         cfg['type'] = st.radio("시책 종류 선택", ["구간 시책", "브릿지 시책 (1기간: 시상 확정)", "브릿지 시책 (2기간: 차월 구간 확보)"], 
                                index=0 if "구간" in cfg['type'] else (1 if "1기간" in cfg['type'] else 2), horizontal=True, key=f"type_{i}")
         
@@ -276,11 +279,11 @@ if mode == "⚙️ 시스템 관리자 모드":
             cols = st.session_state['raw_data'][cfg['file']].columns.tolist()
             def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
-            st.info("💡 동명이인 식별을 위해 아래 4개 컬럼을 정확히 지정해주세요.")
+            st.info("💡 동명이인 식별을 위해 아래 3개 컬럼을 정확히 지정해주세요.")
             cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg['col_name'], cols), key=f"cname_{i}")
-            cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg['col_branch'], cols), key=f"cbranch_{i}")
-            cfg['col_agency'] = st.selectbox("대리점/지사(소속) 컬럼", cols, index=get_idx(cfg['col_agency'], cols), key=f"cagency_{i}")
+            # 🌟 요구사항 2번: 동명이인 분리용 설계사코드(사번)
+            cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg['col_code'], cols), key=f"ccode_{i}")
             
             if "구간" in cfg['type'] or "2기간" in cfg['type']:
                 col_key = 'col_val_curr' if "2기간" in cfg['type'] else 'col_val'
@@ -308,6 +311,31 @@ if mode == "⚙️ 시스템 관리자 모드":
                 st.error("형식이 올바르지 않습니다.")
         st.markdown("</div>", unsafe_allow_html=True) 
 
+    # ---------------------------------------------------------
+    # 🌟 [영역 3] 리플렛(안내 이미지) 관리 🌟
+    # ---------------------------------------------------------
+    st.divider()
+    st.markdown("<h3 style='color:#191f28; font-size:1.4rem; margin-top:10px;'>🖼️ 3. 안내 리플렛(이미지) 등록</h3>", unsafe_allow_html=True)
+    st.info("💡 실적 조회 결과 맨 아래에 보여줄 상품 안내장이나 리플렛 이미지를 등록할 수 있습니다.")
+    
+    leaflet_file = st.file_uploader("리플렛 이미지 업로드 (JPG, PNG)", type=['jpg', 'jpeg', 'png'])
+    if leaflet_file:
+        with open(os.path.join(DATA_DIR, "leaflet.png"), "wb") as f:
+            f.write(leaflet_file.getbuffer())
+        st.success("✅ 리플렛 이미지가 저장되었습니다!")
+        st.rerun()
+
+    leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
+    if os.path.exists(leaflet_path):
+        st.markdown("<p style='color:#333d4b; font-weight:600;'>현재 등록된 리플렛 이미지:</p>", unsafe_allow_html=True)
+        st.image(leaflet_path, width=250)
+        
+        st.markdown('<div class="del-btn-container">', unsafe_allow_html=True)
+        if st.button("🗑️ 등록된 리플렛 삭제", use_container_width=False):
+            os.remove(leaflet_path)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
     if st.session_state['config']:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<style>div.row-widget.stButton > button[kind="secondary"] { background-color: rgb(128, 0, 0) !important; color: white !important; font-size: 1.5rem !important; height: 70px !important; }</style>', unsafe_allow_html=True)
@@ -321,7 +349,6 @@ if mode == "⚙️ 시스템 관리자 모드":
 # ==========================================
 else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
-    
     st.markdown("<h3 style='color:#191f28; font-weight:800; font-size:1.3rem; margin-bottom: 15px;'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     
     st.markdown("<div style='background: #ffffff; padding: 24px; border-radius: 20px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 24px;'>", unsafe_allow_html=True)
@@ -331,7 +358,7 @@ else:
 
     # --- 동명이인 및 데이터 매칭 로직 ---
     matched_configs = {}
-    branches_found = set()
+    codes_found = set()
     needs_disambiguation = False
 
     if user_name and branch_code_input:
@@ -354,18 +381,19 @@ else:
                 
                 if not match.empty:
                     matched_configs[i] = match
-                    if 'col_branch' in cfg and cfg['col_branch']:
+                    # 🌟 동명이인 확인을 위해 설계사 코드 수집 🌟
+                    if 'col_code' in cfg and cfg['col_code']:
                         for _, row in match.iterrows():
-                            branch_name = str(row[cfg['col_branch']]).strip()
-                            if branch_name:
-                                branches_found.add(branch_name)
+                            agent_code = str(row[cfg['col_code']]).strip()
+                            if agent_code:
+                                codes_found.add(agent_code)
 
-    branches_found = {b for b in branches_found if b}
+    codes_found = {c for c in codes_found if c}
     
-    selected_branch = None
-    if len(branches_found) > 1:
-        st.warning("⚠️ 전국 데이터에 동일한 이름을 가진 분들이 존재합니다. 본인의 정확한 지점을 선택해주세요.")
-        selected_branch = st.selectbox("나의 지점명 선택", sorted(list(branches_found)))
+    selected_code = None
+    if len(codes_found) > 1:
+        st.warning("⚠️ 동일한 이름과 지점을 가진 분이 존재합니다. 본인의 설계사코드(사번)를 선택해주세요.")
+        selected_code = st.selectbox("나의 설계사코드 선택", sorted(list(codes_found)))
         needs_disambiguation = True
 
     submit = st.button("내 실적 확인하기")
@@ -385,15 +413,15 @@ else:
             for i, match_df in matched_configs.items():
                 cfg = st.session_state['config'][i]
                 
-                if needs_disambiguation and selected_branch and 'col_branch' in cfg and cfg['col_branch']:
-                    match_df = match_df[match_df[cfg['col_branch']].fillna('').astype(str).str.strip() == selected_branch]
+                # 사용자가 콤보박스에서 설계사 코드를 선택한 경우 데이터 완벽 분리
+                if needs_disambiguation and selected_code and 'col_code' in cfg and cfg['col_code']:
+                    match_df = match_df[match_df[cfg['col_code']].fillna('').astype(str).str.strip() == selected_code]
                 
                 if match_df.empty:
                     continue
                 
                 p_type = cfg.get('type', '구간 시책')
                 
-                # 1) 일반 구간 시책
                 if "구간" in p_type:
                     raw_val = match_df[cfg['col_val']].values[0]
                     try: val = float(str(raw_val).replace(',', ''))
@@ -413,7 +441,6 @@ else:
                     })
                     total_prize_sum += prize
                     
-                # 2) 브릿지 1기간
                 elif "1기간" in p_type: 
                     raw_prev = match_df[cfg['col_val_prev']].values[0]
                     raw_curr = match_df[cfg['col_val_curr']].values[0]
@@ -441,7 +468,6 @@ else:
                     })
                     total_prize_sum += prize
                     
-                # 3) 브릿지 2기간
                 elif "2기간" in p_type:
                     raw_curr = match_df[cfg['col_val_curr']].values[0]
                     try: val_curr = float(str(raw_curr).replace(',', ''))
@@ -459,9 +485,7 @@ else:
                         "val": val_curr, "tier": tier_achieved, "rate": calc_rate
                     })
 
-            # ---------------------------------------------------------
-            # 💡 안전한 문자열 결합 방식 (들여쓰기 에러 방지)
-            # ---------------------------------------------------------
+            # 안전한 문자열 묶음 방식 처리 (들여쓰기 에러 방지)
             if len(calculated_results) > 0:
                 summary_html = (
                     f"<div class='summary-card'>"
@@ -539,3 +563,9 @@ else:
                             f"</div></div>"
                         )
                     st.markdown(card_html, unsafe_allow_html=True)
+                
+                # 🌟 요구사항 3번: 결과 출력 맨 마지막에 등록된 리플렛 이미지 띄우기 🌟
+                user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
+                if os.path.exists(user_leaflet_path):
+                    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+                    st.image(user_leaflet_path, use_container_width=True)
