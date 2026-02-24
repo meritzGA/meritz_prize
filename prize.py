@@ -472,7 +472,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
             )
         st.markdown(stack_html, unsafe_allow_html=True)
 
-if show_share_text:
+    if show_share_text:
         st.markdown("<h4 class='main-title' style='margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
         st.info("💡 아래 텍스트 박스 안의 글자를 복사해서, 해당 설계사의 카톡 창에 붙여넣기 하시면 바로 시상 내용을 보여줄 수 있습니다.")
         st.text_area("카카오톡 복사용 텍스트", value=share_text, height=350)
