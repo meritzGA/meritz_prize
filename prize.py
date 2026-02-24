@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 import json
+import re
 
 # 페이지 설정
 st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide")
@@ -32,16 +33,28 @@ for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
 
-# 🌟 [핵심 해결] 초강력 문자열 정제 함수 (매칭 오류 원천 차단) 🌟
+# 🌟 [핵심 오류 해결] 초강력 문자열 정제 함수 (데이터 타입 불일치 및 공백 완벽 제거) 🌟
 def safe_str(val):
-    if pd.isna(val): return ""
+    if pd.isna(val) or val is None: return ""
+    
+    try:
+        # 엑셀에서 실수(Float)로 읽힌 경우 정수(Int)로 변환하여 소수점 원천 차단
+        if isinstance(val, (int, float)) and float(val).is_integer():
+            val = int(float(val))
+    except:
+        pass
+        
     s = str(val)
-    # 눈에 보이지 않는 띄어쓰기, 줄바꿈, 탭 완전 삭제
-    s = s.replace(' ', '').replace('\n', '').replace('\t', '')
-    # 엑셀 소수점 자동 생성 방지
-    if s.endswith('.0'): s = s[:-2]
-    # 알파벳이 섞여 있을 경우 대문자로 통일
+    # 띄어쓰기, 줄바꿈, 탭 등 눈에 보이지 않는 모든 공백 100% 강제 삭제
+    s = re.sub(r'\s+', '', s)
+    
+    # 엑셀 특유의 .0 잔재가 문자열로 남아있을 경우 제거
+    if s.endswith('.0'): 
+        s = s[:-2]
+        
+    # 대소문자가 섞인 사번 대비 대문자 통일
     return s.upper()
+
 
 # --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응) ---
 st.markdown("""
@@ -177,21 +190,6 @@ st.markdown("""
         div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
     }
-    
-    @media (max-width: 450px) {
-        .summary-total { font-size: 2.1rem !important; }
-        .summary-label { font-size: 1.05rem !important; }
-        .prize-label { font-size: 1.1rem !important; }
-        .prize-value { font-size: 1.45rem !important; }
-        .data-label { font-size: 1rem !important; }
-        .data-value { font-size: 1.15rem !important; }
-        .toss-title { font-size: 1.4rem !important; }
-        .shortfall-text { font-size: 1.05rem !important; }
-        .cumul-stack-box { padding: 16px 20px; flex-direction: row; }
-        .cumul-stack-title { font-size: 1.15rem; }
-        .cumul-stack-val { font-size: 0.95rem; }
-        .cumul-stack-prize { font-size: 1.4rem; }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -207,7 +205,6 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code or col_code not in df.columns: continue
         
-        # 🌟 안전한 정제 후 데이터 필터링 🌟
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
@@ -451,7 +448,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 (오류 완벽 해결 버전)
+# 👥 2. 매니저 관리 페이지 (오류 완벽 차단 & 힌트 기능 추가)
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -464,28 +461,37 @@ if mode == "👥 매니저 관리":
             if not mgr_code:
                 st.warning("지원매니저 코드를 입력해주세요.")
             else:
-                # 🌟 [오류 해결] 엑셀 데이터에 해당 매니저 코드가 존재하는지 '정제된 문자열'로 리스트 화 하여 철저히 검증 🌟
+                # 🌟 [오류 해결] 등록된 데이터의 모든 매니저 코드를 '초강력 정제'하여 검증 풀(Set) 생성 🌟
                 is_valid = False
                 safe_input_code = safe_str(mgr_code)
+                all_valid_codes = set()
                 
                 for cfg in st.session_state['config']:
+                    # 이전 설정(col_manager)과 최신 설정(col_manager_code) 모두 호환되도록 체크
                     mgr_col = cfg.get('col_manager_code', '') or cfg.get('col_manager', '')
                     if mgr_col:
                         df = st.session_state['raw_data'].get(cfg['file'])
                         if df is not None and mgr_col in df.columns:
-                            # Pandas Series 비교의 오류를 막기 위해 리스트로 빼서 직접 확인
-                            valid_codes_list = [safe_str(x) for x in df[mgr_col].tolist()]
-                            if safe_input_code in valid_codes_list:
-                                is_valid = True
-                                break
+                            # 엑셀의 모든 매니저 데이터를 안전하게 정제하여 저장
+                            for val in df[mgr_col].unique():
+                                clean_val = safe_str(val)
+                                if clean_val: all_valid_codes.add(clean_val)
+                
+                if safe_input_code in all_valid_codes:
+                    is_valid = True
                 
                 if is_valid:
                     st.session_state.mgr_logged_in = True
-                    st.session_state.mgr_code = mgr_code
+                    # 안전하게 정제된 코드를 저장해서 산하 조회 시 충돌 원천 차단
+                    st.session_state.mgr_code = safe_input_code 
                     st.session_state.mgr_step = 'main'
                     st.rerun()
                 else:
-                    st.error("❌ 입력하신 매니저 코드가 등록된 실적 데이터에 존재하지 않습니다.")
+                    st.error(f"❌ 입력하신 코드({mgr_code})가 등록된 실적 데이터에 존재하지 않습니다.")
+                    st.info("💡 관리자 화면에서 '지원매니저코드 컬럼'이 정확히 지정되었는지 확인해주세요.")
+                    if all_valid_codes:
+                        sample_codes = ", ".join(list(all_valid_codes)[:10])
+                        st.warning(f"🧐 (참고) 현재 시스템이 인식하고 있는 매니저 코드 예시: {sample_codes}")
     else:
         if st.button("🚪 로그아웃"):
             st.session_state.mgr_logged_in = False
@@ -509,7 +515,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_category = '브릿지'
                     st.rerun()
                 
-        # --- (2) 금액별 폴더 선택 ---
+        # --- (2) 금액별 폴더 선택 (UI 완벽 유지) ---
         elif step == 'tiers':
             if st.button("⬅️ 뒤로가기", use_container_width=False):
                 st.session_state.mgr_step = 'main'
@@ -518,9 +524,9 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 🌟 [오류 해결] 해당 매니저 산하의 모든 설계사 사번을 안전하게 수집 🌟
+            # 🌟 [오류 해결] 정제된 매니저 코드를 기반으로 산하 설계사 100% 수집 🌟
             my_agents = set()
-            safe_login_code = safe_str(st.session_state.mgr_code)
+            safe_login_code = st.session_state.mgr_code
             
             for cfg in st.session_state['config']:
                 if cfg.get('category') == 'cumulative': continue
@@ -532,14 +538,14 @@ if mode == "👥 매니저 관리":
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None or mgr_col not in df.columns or col_code not in df.columns: continue
                 
-                # 정제된 코드로 매칭
+                # 안전한 매칭 (정제된 데이터끼리 비교)
                 mask = df[mgr_col].apply(safe_str) == safe_login_code
                 match_df = df[mask]
                 
                 for ac in match_df[col_code].apply(safe_str):
                     if ac: my_agents.add(ac)
             
-            # 폴더 범위 지정
+            # 🌟 폴더 범위 지정 (팀장님 요청 하드코딩 구조 100% 유지) 🌟
             ranges = {
                 500000: (300000, 500000), 
                 300000: (200000, 300000), 
@@ -548,14 +554,14 @@ if mode == "👥 매니저 관리":
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
-            # 🌟 [오류 해결] 정확히 구간과 브릿지 2기간의 'val' 값만 추적해서 폴더에 담기 🌟
+            # 각 설계사별 실적 계산 후 알맞은 폴더에 카운트
             for agent_code in my_agents:
                 calc_results, _ = calculate_agent_performance(agent_code)
                 matched_folders = set()
                 
                 for res in calc_results:
                     if cat == "구간" and res['type'] != "구간": continue
-                    if cat == "브릿지" and res['type'] != "브릿지2": continue # 브릿지 관리는 2기간(차월 조건) 기준
+                    if cat == "브릿지" and res['type'] != "브릿지2": continue
                     
                     val = res.get('val', 0.0)
                     for t, (min_v, max_v) in ranges.items():
@@ -602,11 +608,12 @@ if mode == "👥 매니저 관리":
                 for cfg in st.session_state['config']:
                     if cfg.get('col_code') and cfg.get('col_name'):
                         df = st.session_state['raw_data'].get(cfg['file'])
-                        if df is not None:
+                        if df is not None and cfg['col_code'] in df.columns:
                             mask = df[cfg['col_code']].apply(safe_str) == code
                             match_df = df[mask]
                             if not match_df.empty:
-                                agent_name = safe_str(match_df[cfg['col_name']].values[0])
+                                if cfg['col_name'] in match_df.columns:
+                                    agent_name = safe_str(match_df[cfg['col_name']].values[0])
                                 br = cfg.get('col_branch','')
                                 ag = cfg.get('col_agency','')
                                 if ag and ag in df.columns: agent_agency = safe_str(match_df[ag].values[0])
@@ -656,7 +663,6 @@ if mode == "👥 매니저 관리":
                 st.image(user_leaflet_path, use_container_width=True)
                 
             st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ==========================================
 # 🔒 3. 시스템 관리자 모드
@@ -790,7 +796,6 @@ elif mode == "⚙️ 시스템 관리자":
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
             
-            # 🌟 관리자 화면에서 지원매니저코드 컬럼명을 일관되게 'col_manager_code'로 저장 🌟
             cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', cfg.get('col_manager', '')), cols), key=f"cmgrcode_{i}")
             
             if "1기간" in cfg['type']:
