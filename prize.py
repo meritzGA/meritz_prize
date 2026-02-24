@@ -33,18 +33,30 @@ for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
 
-# 🌟 [오류 해결] 엑셀 외계어(_xHHHH_) 복원 및 정제 함수
+# 🌟 [오류 해결] 엑셀 외계어(_xHHHH_) 복원 및 정제 함수 🌟
 def safe_str(val):
     if pd.isna(val) or val is None: return ""
+    
     try:
+        # 소수점으로 읽힌 사번 복구 (예: 12345.0 -> 12345)
         if isinstance(val, (int, float)) and float(val).is_integer():
             val = int(float(val))
     except:
         pass
+        
     s = str(val)
+    
+    # 1. 엑셀의 숨겨진 16진수 외계어(_x0033_ 등)를 원래 문자(3 등)로 완벽 복원
     s = re.sub(r'_[xX]([0-9A-Fa-f]{4})_', lambda m: chr(int(m.group(1), 16)), s)
+    
+    # 2. 보이지 않는 띄어쓰기, 엔터, 탭 강제 삭제
     s = re.sub(r'\s+', '', s)
-    if s.endswith('.0'): s = s[:-2]
+    
+    # 3. 문자열에 남은 .0 잔재 제거
+    if s.endswith('.0'): 
+        s = s[:-2]
+        
+    # 4. 알파벳 대문자 통일 (매칭률 100% 보장)
     return s.upper()
 
 # 🌟 [속도 100배 향상 핵심] 정제된 데이터를 캐싱하여 중복 연산 완전 제거 🌟
@@ -64,6 +76,9 @@ def safe_float(val):
 # --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응) ---
 st.markdown("""
 <style>
+    /* ========================================= */
+    /* ☀️ 기본 모드 (Light Mode) CSS             */
+    /* ========================================= */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
     
@@ -81,6 +96,7 @@ st.markdown("""
 
     [data-testid="stForm"] { background-color: transparent; border: none; padding: 0; margin-bottom: 24px; }
 
+    /* 공통 텍스트 타이틀 클래스 */
     .admin-title { color: #191f28; font-weight: 800; font-size: 1.8rem; margin-top: 20px; }
     .sub-title { color: #191f28; font-size: 1.4rem; margin-top: 30px; font-weight: 700; }
     .config-title { color: #191f28; font-size: 1.3rem; margin: 0; font-weight: 700; }
@@ -88,10 +104,12 @@ st.markdown("""
     .blue-title { color: #1e3c72; font-size: 1.4rem; margin-top: 10px; font-weight: 800; }
     .agent-title { color: #3182f6; font-weight: 800; font-size: 1.5rem; margin-top: 0; text-align: center; }
 
+    /* 공통 박스 클래스 */
     .config-box { background: #f9fafb; padding: 15px; border-radius: 15px; border: 1px solid #e5e8eb; margin-top: 15px; }
     .config-box-blue { background: #f0f4f8; padding: 15px; border-radius: 15px; border: 1px solid #c7d2fe; margin-top: 15px; }
     .detail-box { background: #ffffff; padding: 20px; border-radius: 20px; border: 2px solid #e5e8eb; margin-top: 10px; margin-bottom: 30px; }
 
+    /* 시책 요약 카드 (상단) */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -108,6 +126,7 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; white-space: nowrap; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
+    /* 개별 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
@@ -119,6 +138,7 @@ st.markdown("""
     .data-label { color: #8b95a1; font-size: 1.1rem; word-break: keep-all; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
     
+    /* 상위 구간 부족 금액 강조 디자인 */
     .shortfall-row { background-color: #fff0f0; padding: 14px; border-radius: 12px; margin-top: 15px; margin-bottom: 5px; border: 2px dashed #ff4b4b; text-align: center; }
     .shortfall-text { color: #d9232e; font-size: 1.2rem; font-weight: 800; word-break: keep-all; }
 
@@ -129,6 +149,7 @@ st.markdown("""
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
+    /* 누계 전용 세로 정렬 박스 */
     .cumul-stack-box {
         background: #ffffff; border: 1px solid #e5e8eb; border-left: 6px solid #2a5298; 
         border-radius: 16px; padding: 20px 24px; margin-bottom: 16px; 
@@ -140,6 +161,7 @@ st.markdown("""
     .cumul-stack-val { font-size: 1.05rem; color: #8b95a1; }
     .cumul-stack-prize { font-size: 1.6rem; color: #d9232e; font-weight: 800; text-align: right; white-space: nowrap; }
     
+    /* 입력 컴포넌트 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
@@ -147,6 +169,7 @@ st.markdown("""
     div[data-testid="stSelectbox"] > div { background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; }
     div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
+    /* 버튼 */
     div.stButton > button[kind="primary"] {
         font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important; color: white !important; border: none !important; width: 100%; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2) !important;
@@ -157,6 +180,14 @@ st.markdown("""
         border-radius: 12px !important; background-color: #e8eaed !important; color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; margin-top: 5px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; white-space: normal !important; 
     }
 
+    .del-btn-container button {
+        background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
+        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
+    }
+
+    /* ========================================= */
+    /* 🌙 다크 모드 (Dark Mode) CSS              */
+    /* ========================================= */
     @media (prefers-color-scheme: dark) {
         [data-testid="stAppViewContainer"] { background-color: #121212 !important; color: #e0e0e0 !important; }
         label, p, .stMarkdown p { color: #e0e0e0 !important; }
@@ -336,7 +367,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     if weekly_res:
         summary_html = (
             f"<div class='summary-card'>"
-            f"<div class='summary-label'>{user_name} 팀장님의 시상금 현황</div>"
+            f"<div class='summary-label'>{user_name} 팀장님의 진행 중인 시책 예상 시상</div>"
             f"<div class='summary-total'>{weekly_total:,.0f}원</div>"
             f"<div class='summary-divider'></div>"
         )
@@ -414,7 +445,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     if cumul_res:
         cumul_html = (
             f"<div class='cumulative-card'>"
-            f"<div class='summary-label'>{user_name} 팀장님의 월간 누계 시상 현황</div>"
+            f"<div class='summary-label'>{user_name} 팀장님의 월간 확정(누계) 시상</div>"
             f"<div class='summary-total'>{cumul_total:,.0f}원</div>"
             f"<div class='summary-divider'></div>"
         )
@@ -453,7 +484,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 (속도 대폭 향상 버그 픽스)
+# 👥 2. 매니저 관리 페이지 
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -588,7 +619,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_agents = my_agents 
                     st.rerun()
                 
-        # --- (3) 선택한 폴더 내 설계사 명단 확인 ---
+        # --- (3) 선택한 폴더 내 설계사 명단 확인 (가나다 정렬 적용) ---
         elif step == 'list':
             if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'tiers'
@@ -643,7 +674,9 @@ if mode == "👥 매니저 관리":
             if not near_agents:
                 st.info(f"해당 구간에 소속 설계사가 없습니다.")
             else:
-                near_agents.sort(key=lambda x: x[3], reverse=True)
+                # 🌟 [요청 사항 적용] 지사명(agency) 가나다순, 이름(name) 가나다순 정렬 🌟
+                near_agents.sort(key=lambda x: (x[2], x[1]))
+                
                 for code, name, agency, val in near_agents:
                     display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
                     if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
@@ -803,8 +836,8 @@ elif mode == "⚙️ 시스템 관리자":
             st.info("💡 식별을 위해 아래 컬럼들을 지정해주세요.")
             cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg.get('col_name', ''), cols), key=f"cname_{i}")
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
+            cfg['col_agency'] = st.selectbox("대리점/지사명 컬럼", cols, index=get_idx(cfg.get('col_agency', ''), cols), key=f"cagency_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
-            
             cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', cfg.get('col_manager', '')), cols), key=f"cmgrcode_{i}")
             
             if "1기간" in cfg['type']:
