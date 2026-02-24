@@ -4,6 +4,8 @@ import numpy as np
 import os
 import json
 import re
+from datetime import datetime
+import streamlit.components.v1 as components
 
 # 페이지 설정
 st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide")
@@ -12,6 +14,47 @@ st.set_page_config(page_title="메리츠화재 시상 현황", layout="wide")
 DATA_DIR = "app_data"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
+
+# --- 🔒 추가 기능: 접속 로그 저장 함수 ---
+LOG_FILE = os.path.join(DATA_DIR, "access_log.csv")
+
+def save_log(user_name, user_code, action_type):
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_data = pd.DataFrame([[now, user_name, user_code, action_type]], 
+                            columns=["시간", "이름/구분", "코드", "작업"])
+    if not os.path.exists(LOG_FILE):
+        log_data.to_csv(LOG_FILE, index=False, encoding="utf-8-sig")
+    else:
+        log_data.to_csv(LOG_FILE, mode='a', header=False, index=False, encoding="utf-8-sig")
+
+# --- 📋 추가 기능: 카카오톡 원클릭 복사 컴포넌트 ---
+def copy_btn_component(text):
+    escaped_text = json.dumps(text, ensure_ascii=False)
+    js_code = f"""
+    <div id="copy-container">
+        <button id="copy-btn">💬 카카오톡 메시지 원클릭 복사</button>
+    </div>
+    <script>
+    document.getElementById("copy-btn").onclick = function() {{
+        const text = {escaped_text};
+        navigator.clipboard.writeText(text).then(function() {{
+            alert("메시지가 복사되었습니다! 원하시는 채팅창에 붙여넣기(Ctrl+V) 하세요.");
+        }}, function(err) {{
+            console.error('복사 실패:', err);
+        }});
+    }}
+    </script>
+    <style>
+        #copy-btn {{
+            width: 100%; height: 55px; background-color: #FEE500; color: #3C1E1E;
+            border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem;
+            cursor: pointer; margin-top: 5px; margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }}
+        #copy-btn:active {{ transform: scale(0.98); }}
+    </style>
+    """
+    components.html(js_code, height=85)
 
 # 데이터 불러오기 로직
 if 'raw_data' not in st.session_state:
@@ -472,10 +515,10 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
             )
         st.markdown(stack_html, unsafe_allow_html=True)
 
+    # 🌟 [수정된 부분] 텍스트 박스 대신 카카오톡 원클릭 복사 버튼 렌더링
     if show_share_text:
         st.markdown("<h4 class='main-title' style='margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
-        st.info("💡 아래 텍스트 박스 안의 글자를 복사해서, 해당 설계사의 카톡 창에 붙여넣기 하시면 바로 시상 내용을 보여줄 수 있습니다.")
-        st.text_area("카카오톡 복사용 텍스트", value=share_text, height=350)
+        copy_btn_component(share_text)
 
 
 # ==========================================
@@ -518,6 +561,8 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_logged_in = True
                     st.session_state.mgr_code = safe_input_code 
                     st.session_state.mgr_step = 'main'
+                    # 🌟 [로그 저장] 매니저 로그인 기록 🌟
+                    save_log("매니저", safe_input_code, "MANAGER_LOGIN")
                     st.rerun()
                 else:
                     st.error(f"❌ 입력하신 코드({mgr_code})가 등록된 실적 데이터에 존재하지 않습니다.")
@@ -583,7 +628,7 @@ if mode == "👥 매니저 관리":
                 500000: (300000, float('inf')),
                 300000: (200000, 300000), 
                 200000: (100000, 200000), 
-                100000: (0, 100000)       
+                100000: (0, 100000)        
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
@@ -713,11 +758,29 @@ elif mode == "⚙️ 시스템 관리자":
     st.markdown("<h2 class='admin-title'>관리자 설정</h2>", unsafe_allow_html=True)
     
     admin_pw = st.text_input("관리자 비밀번호를 입력하세요", type="password")
-    if admin_pw != "meritz0085":
+    
+    # 🌟 [보안 로직 추가] 시크릿 키로 비밀번호 확인, 설정되지 않은 경우 기본 비밀번호 사용
+    try:
+        real_pw = st.secrets["admin_password"]
+    except:
+        real_pw = "meritz0085"
+        
+    if admin_pw != real_pw:
         if admin_pw: st.error("비밀번호가 일치하지 않습니다.")
         st.stop()
         
     st.success("인증 성공! 변경 사항은 가장 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
+
+    # 🌟 [로그 다운로드 버튼 추가]
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "rb") as f:
+            st.download_button(
+                label="📊 사용자 접속 기록 (로그) 다운로드", 
+                data=f, 
+                file_name=f"access_log_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+    st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
     
     # ---------------------------------------------------------
     # [영역 1] 파일 업로드 및 관리
@@ -1012,6 +1075,9 @@ else:
             calc_results, total_prize = calculate_agent_performance(final_target_code)
             
             if calc_results:
+                # 🌟 [로그 저장] 일반 설계사 실적 조회 성공 시 기록 🌟
+                save_log(f"{user_name}({branch_code_input}지점)", final_target_code, "USER_SEARCH")
+                
                 render_ui_cards(user_name, calc_results, total_prize, show_share_text=False)
                 
                 user_leaflet_path = os.path.join(DATA_DIR, "leaflet.png")
