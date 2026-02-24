@@ -33,26 +33,30 @@ for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
 
-# 🌟 [핵심 오류 해결] 초강력 문자열 정제 함수 (데이터 타입 불일치 및 공백 완벽 제거) 🌟
+# 🌟 [핵심 오류 해결] 엑셀 외계어(_xHHHH_) 복원 및 초강력 문자열 정제 함수 🌟
 def safe_str(val):
     if pd.isna(val) or val is None: return ""
     
     try:
-        # 엑셀에서 실수(Float)로 읽힌 경우 정수(Int)로 변환하여 소수점 원천 차단
+        # 실수(Float)로 읽힌 경우 정수(Int)로 변환
         if isinstance(val, (int, float)) and float(val).is_integer():
             val = int(float(val))
     except:
         pass
         
     s = str(val)
-    # 띄어쓰기, 줄바꿈, 탭 등 눈에 보이지 않는 모든 공백 100% 강제 삭제
+    
+    # 1. 엑셀 특유의 숨겨진 유니코드 외계어(_x0033_ 등)를 원래 문자(3 등)로 100% 자동 복원
+    s = re.sub(r'_[xX]([0-9A-Fa-f]{4})_', lambda m: chr(int(m.group(1), 16)), s)
+    
+    # 2. 띄어쓰기, 줄바꿈, 탭 등 눈에 보이지 않는 공백 강제 삭제
     s = re.sub(r'\s+', '', s)
     
-    # 엑셀 특유의 .0 잔재가 문자열로 남아있을 경우 제거
+    # 3. 소수점 잔재 제거
     if s.endswith('.0'): 
         s = s[:-2]
         
-    # 대소문자가 섞인 사번 대비 대문자 통일
+    # 4. 영문 사번 대문자 통일
     return s.upper()
 
 
@@ -189,6 +193,21 @@ st.markdown("""
         div[data-testid="stTextInput"] input { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
+    }
+    
+    @media (max-width: 450px) {
+        .summary-total { font-size: 2.1rem !important; }
+        .summary-label { font-size: 1.05rem !important; }
+        .prize-label { font-size: 1.1rem !important; }
+        .prize-value { font-size: 1.45rem !important; }
+        .data-label { font-size: 1rem !important; }
+        .data-value { font-size: 1.15rem !important; }
+        .toss-title { font-size: 1.4rem !important; }
+        .shortfall-text { font-size: 1.05rem !important; }
+        .cumul-stack-box { padding: 16px 20px; flex-direction: row; }
+        .cumul-stack-title { font-size: 1.15rem; }
+        .cumul-stack-val { font-size: 0.95rem; }
+        .cumul-stack-prize { font-size: 1.4rem; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -448,7 +467,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 (오류 완벽 차단 & 힌트 기능 추가)
+# 👥 2. 매니저 관리 페이지 
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -461,18 +480,16 @@ if mode == "👥 매니저 관리":
             if not mgr_code:
                 st.warning("지원매니저 코드를 입력해주세요.")
             else:
-                # 🌟 [오류 해결] 등록된 데이터의 모든 매니저 코드를 '초강력 정제'하여 검증 풀(Set) 생성 🌟
                 is_valid = False
                 safe_input_code = safe_str(mgr_code)
                 all_valid_codes = set()
                 
                 for cfg in st.session_state['config']:
-                    # 이전 설정(col_manager)과 최신 설정(col_manager_code) 모두 호환되도록 체크
                     mgr_col = cfg.get('col_manager_code', '') or cfg.get('col_manager', '')
                     if mgr_col:
                         df = st.session_state['raw_data'].get(cfg['file'])
                         if df is not None and mgr_col in df.columns:
-                            # 엑셀의 모든 매니저 데이터를 안전하게 정제하여 저장
+                            # 엑셀의 외계어(_xHHHH_) 코드를 모두 복원하여 정상 문자열과 비교
                             for val in df[mgr_col].unique():
                                 clean_val = safe_str(val)
                                 if clean_val: all_valid_codes.add(clean_val)
@@ -482,7 +499,6 @@ if mode == "👥 매니저 관리":
                 
                 if is_valid:
                     st.session_state.mgr_logged_in = True
-                    # 안전하게 정제된 코드를 저장해서 산하 조회 시 충돌 원천 차단
                     st.session_state.mgr_code = safe_input_code 
                     st.session_state.mgr_step = 'main'
                     st.rerun()
@@ -491,7 +507,7 @@ if mode == "👥 매니저 관리":
                     st.info("💡 관리자 화면에서 '지원매니저코드 컬럼'이 정확히 지정되었는지 확인해주세요.")
                     if all_valid_codes:
                         sample_codes = ", ".join(list(all_valid_codes)[:10])
-                        st.warning(f"🧐 (참고) 현재 시스템이 인식하고 있는 매니저 코드 예시: {sample_codes}")
+                        st.warning(f"🧐 (참고) 현재 시스템이 복원하여 인식하고 있는 정상 코드 예시: {sample_codes}")
     else:
         if st.button("🚪 로그아웃"):
             st.session_state.mgr_logged_in = False
@@ -515,7 +531,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_category = '브릿지'
                     st.rerun()
                 
-        # --- (2) 금액별 폴더 선택 (UI 완벽 유지) ---
+        # --- (2) 금액별 폴더 선택 ---
         elif step == 'tiers':
             if st.button("⬅️ 뒤로가기", use_container_width=False):
                 st.session_state.mgr_step = 'main'
@@ -524,7 +540,6 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 🌟 [오류 해결] 정제된 매니저 코드를 기반으로 산하 설계사 100% 수집 🌟
             my_agents = set()
             safe_login_code = st.session_state.mgr_code
             
@@ -545,7 +560,6 @@ if mode == "👥 매니저 관리":
                 for ac in match_df[col_code].apply(safe_str):
                     if ac: my_agents.add(ac)
             
-            # 🌟 폴더 범위 지정 (팀장님 요청 하드코딩 구조 100% 유지) 🌟
             ranges = {
                 500000: (300000, 500000), 
                 300000: (200000, 300000), 
@@ -554,7 +568,6 @@ if mode == "👥 매니저 관리":
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
-            # 각 설계사별 실적 계산 후 알맞은 폴더에 카운트
             for agent_code in my_agents:
                 calc_results, _ = calculate_agent_performance(agent_code)
                 matched_folders = set()
@@ -572,7 +585,6 @@ if mode == "👥 매니저 관리":
                 for t in matched_folders:
                     counts[t] += 1
             
-            # 폴더 UI 렌더링
             for t, (min_v, max_v) in ranges.items():
                 count = counts[t]
                 if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만) - 총 {count}명", use_container_width=True, key=f"t_{t}"):
@@ -580,7 +592,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_target = t
                     st.session_state.mgr_min_v = min_v
                     st.session_state.mgr_max_v = max_v
-                    st.session_state.mgr_agents = my_agents # 수집된 사번 목록 전달
+                    st.session_state.mgr_agents = my_agents 
                     st.rerun()
                 
         # --- (3) 선택한 폴더 내 설계사 명단 확인 ---
@@ -602,7 +614,6 @@ if mode == "👥 매니저 관리":
             for code in my_agents:
                 calc_results, _ = calculate_agent_performance(code)
                 
-                # 원본 엑셀에서 이름과 소속지점 찾아오기
                 agent_name = "이름없음"
                 agent_agency = ""
                 for cfg in st.session_state['config']:
@@ -620,7 +631,6 @@ if mode == "👥 매니저 관리":
                                 elif br and br in df.columns: agent_agency = safe_str(match_df[br].values[0])
                                 break
 
-                # 폴더 조건에 맞는지 확인 후 명단 추가
                 for res in calc_results:
                     if cat == "구간" and res['type'] != "구간": continue
                     if cat == "브릿지" and res['type'] != "브릿지2": continue
@@ -628,12 +638,11 @@ if mode == "👥 매니저 관리":
                     val = res.get('val', 0.0)
                     if min_v <= val < max_v:
                         near_agents.append((code, agent_name, agent_agency, val))
-                        break # 한 명단에 중복 표시 방지
+                        break
             
             if not near_agents:
                 st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
             else:
-                # 실적이 높은 순(부족금액이 적은 순)으로 정렬
                 near_agents.sort(key=lambda x: x[3], reverse=True)
                 for code, name, agency, val in near_agents:
                     display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
