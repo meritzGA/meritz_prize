@@ -150,23 +150,14 @@ st.markdown("""
     /* 🌙 다크 모드 (Dark Mode) CSS              */
     /* ========================================= */
     @media (prefers-color-scheme: dark) {
-        /* 전체 배경 및 텍스트 반전 */
         [data-testid="stAppViewContainer"] { background-color: #121212 !important; color: #e0e0e0 !important; }
         label, p, .stMarkdown p { color: #e0e0e0 !important; }
-        
-        /* 상단 메뉴 탭 */
         div[data-testid="stRadio"] > div { background-color: #1e1e1e !important; border-color: #333 !important; }
-        
-        /* 공통 텍스트 타이틀 반전 */
         .admin-title, .sub-title, .config-title, .main-title { color: #ffffff !important; }
         .blue-title, .agent-title { color: #66b2ff !important; }
-        
-        /* 공통 박스 반전 */
         .config-box { background-color: #1a1a1a !important; border-color: #333 !important; }
         .config-box-blue { background-color: #121928 !important; border-color: #2a5298 !important; }
         .detail-box { background-color: #121212 !important; border-color: #333 !important; }
-        
-        /* 개별 상세 카드 반전 */
         .toss-card { background-color: #1e1e1e !important; border-color: #333 !important; box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important; }
         .toss-title { color: #ffffff !important; }
         .toss-desc { color: #ff6b6b !important; }
@@ -175,22 +166,14 @@ st.markdown("""
         .prize-label { color: #ffffff !important; }
         .prize-value { color: #ff4b4b !important; }
         .toss-divider { background-color: #333 !important; }
-        
-        /* 상위 구간 부족 금액 강조 디자인 반전 */
         .shortfall-row { background-color: #2a1215 !important; border-color: #ff4b4b !important; }
         .shortfall-text { color: #ff6b6b !important; }
-        
-        /* 누계 전용 세로 정렬 박스 반전 */
         .cumul-stack-box { background-color: #1e1e1e !important; border-color: #333 !important; border-left-color: #4da3ff !important; box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important; }
         .cumul-stack-title { color: #4da3ff !important; }
         .cumul-stack-val { color: #a0aab5 !important; }
         .cumul-stack-prize { color: #ff4b4b !important; }
-        
-        /* 입력 컴포넌트 반전 */
         div[data-testid="stTextInput"] input { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
-        
-        /* 회색/보조 버튼 반전 */
         div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
     }
     
@@ -221,7 +204,7 @@ def calculate_agent_performance(target_code):
         df = st.session_state['raw_data'].get(cfg['file'])
         if df is None: continue
         col_code = cfg.get('col_code', '')
-        if not col_code: continue
+        if not col_code or col_code not in df.columns: continue
         
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
@@ -231,8 +214,8 @@ def calculate_agent_performance(target_code):
         
         if cat == 'weekly':
             if "1기간" in p_type: 
-                raw_prev = match_df[cfg['col_val_prev']].values[0]
-                raw_curr = match_df[cfg['col_val_curr']].values[0]
+                raw_prev = match_df[cfg['col_val_prev']].values[0] if cfg.get('col_val_prev') in df.columns else 0
+                raw_curr = match_df[cfg['col_val_curr']].values[0] if cfg.get('col_val_curr') in df.columns else 0
                 try: val_prev = float(str(raw_prev).replace(',', ''))
                 except: val_prev = 0.0
                 try: val_curr = float(str(raw_curr).replace(',', ''))
@@ -259,7 +242,7 @@ def calculate_agent_performance(target_code):
                 })
                 
             elif "2기간" in p_type:
-                raw_curr = match_df[cfg['col_val_curr']].values[0]
+                raw_curr = match_df[cfg['col_val_curr']].values[0] if cfg.get('col_val_curr') in df.columns else 0
                 try: val_curr = float(str(raw_curr).replace(',', ''))
                 except: val_curr = 0.0
                 
@@ -289,7 +272,7 @@ def calculate_agent_performance(target_code):
                 })
 
             else: 
-                raw_val = match_df[cfg['col_val']].values[0]
+                raw_val = match_df[cfg['col_val']].values[0] if cfg.get('col_val') in df.columns else 0
                 try: val = float(str(raw_val).replace(',', ''))
                 except: val = 0.0
                 
@@ -466,7 +449,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 
+# 👥 2. 매니저 관리 페이지 (기존 폴더 UI 완벽 보존 + 결함 수정)
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -474,7 +457,7 @@ if mode == "👥 매니저 관리":
     if 'mgr_logged_in' not in st.session_state: st.session_state.mgr_logged_in = False
     
     if not st.session_state.mgr_logged_in:
-        mgr_code = st.text_input("지원매니저 사번(코드) 또는 이름을 입력하세요", type="password", placeholder="예: 12345 또는 홍길동")
+        mgr_code = st.text_input("지원매니저 사번(코드)을 입력하세요", type="password", placeholder="예: 12345")
         if st.button("로그인", type="primary"):
             st.session_state.mgr_logged_in = True
             st.session_state.mgr_code = mgr_code
@@ -488,6 +471,7 @@ if mode == "👥 매니저 관리":
         
         step = st.session_state.get('mgr_step', 'main')
         
+        # --- (1) 메인 폴더 선택 ---
         if step == 'main':
             st.markdown("<h3 class='main-title'>어떤 실적을 확인하시겠습니까?</h3>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
@@ -502,6 +486,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_category = '브릿지'
                     st.rerun()
                 
+        # --- (2) 금액별 폴더 선택 ---
         elif step == 'tiers':
             if st.button("⬅️ 뒤로가기", use_container_width=False):
                 st.session_state.mgr_step = 'main'
@@ -510,40 +495,54 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
+            # 🌟 1. 이 매니저 산하의 모든 설계사 코드를 완벽하게 수집 🌟
             agents = {}
             for cfg in st.session_state['config']:
                 mgr_col = cfg.get('col_manager', '')
                 if not mgr_col: continue
                 df = st.session_state['raw_data'].get(cfg['file'])
-                if df is None: continue
+                if df is None or mgr_col not in df.columns: continue
                 
+                # 매니저 사번으로 필터링
                 match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
-                for _, row in match_df.iterrows():
-                    code = safe_str(row.get(cfg.get('col_code', '')))
-                    if code: agents[code] = True
+                col_code = cfg.get('col_code', '')
+                if col_code and col_code in df.columns:
+                    for _, row in match_df.iterrows():
+                        code = safe_str(row.get(col_code))
+                        if code: agents[code] = True
             
+            # 🌟 2. 하드코딩된 폴더(50,30,20,10)를 유지하되, 누락 공백을 없앤 완벽한 범위 지정 🌟
             ranges = {
-                500000: (400000, 500000),
-                300000: (200000, 300000),
-                200000: (100000, 200000),
-                100000: (0, 100000)
+                500000: (300000, 500000), # 30만 달성 후 50만 도전중인 사람
+                300000: (200000, 300000), # 20만 달성 후 30만 도전중인 사람
+                200000: (100000, 200000), # 10만 달성 후 20만 도전중인 사람
+                100000: (0, 100000)       # 0만 달성 후 10만 도전중인 사람
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
+            # 🌟 3. 각 설계사별로 중복 계산을 막고, 어떤 폴더에 들어가는지 파악 🌟
             if agents:
                 for code in agents.keys():
                     calc_results, _ = calculate_agent_performance(code)
+                    matched_folders = set() # 한 설계사가 여러 시책에서 동일 폴더면 1명으로만 카운트
+                    
                     for res in calc_results:
                         if cat == "구간" and res['type'] != "구간": continue
                         if cat == "브릿지" and "브릿지" not in res['type']: continue
                         if res['category'] == 'cumulative': continue
                         
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
+                        if val is None: val = 0.0
+                        
                         for t, (min_v, max_v) in ranges.items():
                             if min_v <= val < max_v:
-                                counts[t] += 1
+                                matched_folders.add(t)
                                 break
+                                
+                    for t in matched_folders:
+                        counts[t] += 1
             
+            # 폴더 UI 렌더링
             for t, (min_v, max_v) in ranges.items():
                 count = counts[t]
                 if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만) - 총 {count}명", use_container_width=True, key=f"t_{t}"):
@@ -553,6 +552,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_max_v = max_v
                     st.rerun()
                 
+        # --- (3) 선택한 폴더 내 설계사 명단 확인 ---
         elif step == 'list':
             if st.button("⬅️ 폴더로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'tiers'
@@ -571,15 +571,22 @@ if mode == "👥 매니저 관리":
                 mgr_col = cfg.get('col_manager', '')
                 if not mgr_col: continue
                 df = st.session_state['raw_data'].get(cfg['file'])
-                if df is None: continue
+                if df is None or mgr_col not in df.columns: continue
                 
                 match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
-                for _, row in match_df.iterrows():
-                    code = safe_str(row.get(cfg.get('col_code', '')))
-                    name = safe_str(row.get(cfg.get('col_name', '')))
-                    agency = safe_str(row.get(cfg.get('col_agency', '')))
-                    if not agency: agency = safe_str(row.get(cfg.get('col_branch', '')))
-                    if code and name: agents[code] = {"name": name, "agency": agency}
+                col_code = cfg.get('col_code', '')
+                col_name = cfg.get('col_name', '')
+                col_agency = cfg.get('col_agency', '')
+                col_branch = cfg.get('col_branch', '')
+                
+                if col_code and col_code in df.columns:
+                    for _, row in match_df.iterrows():
+                        code = safe_str(row.get(col_code))
+                        name = safe_str(row.get(col_name)) if col_name and col_name in df.columns else "이름없음"
+                        agency = safe_str(row.get(col_agency)) if col_agency and col_agency in df.columns else ""
+                        if not agency and col_branch and col_branch in df.columns:
+                            agency = safe_str(row.get(col_branch))
+                        if code and name: agents[code] = {"name": name, "agency": agency}
             
             if not agents:
                 st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.")
@@ -596,14 +603,17 @@ if mode == "👥 매니저 관리":
                         if res['category'] == 'cumulative': continue
                         
                         val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
+                        if val is None: val = 0.0
+                        
                         if min_v <= val < max_v:
                             near_agents.append((code, name, agency, val))
-                            break
+                            break # 여러 시책이 해당돼도 목록에는 1번만 표시
                 
                 if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
-                    near_agents.sort(key=lambda x: (x[2], x[1]))
+                    # 부족 금액이 적을수록(실적이 높을수록) 상단에 배치
+                    near_agents.sort(key=lambda x: x[3], reverse=True)
                     for code, name, agency, val in near_agents:
                         display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
                         if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
@@ -612,6 +622,7 @@ if mode == "👥 매니저 관리":
                             st.session_state.mgr_step = 'detail'
                             st.rerun()
 
+        # --- (4) 상세 내역 및 카톡 공유 ---
         elif step == 'detail':
             if st.button("⬅️ 명단으로 돌아가기", use_container_width=False):
                 st.session_state.mgr_step = 'list'
@@ -619,7 +630,6 @@ if mode == "👥 매니저 관리":
             
             code = st.session_state.mgr_selected_code
             name = st.session_state.mgr_selected_name
-            cat = st.session_state.mgr_category
             
             st.markdown(f"<div class='detail-box'>", unsafe_allow_html=True)
             st.markdown(f"<h4 class='agent-title'>👤 {name} 설계사님</h4>", unsafe_allow_html=True)
@@ -632,6 +642,7 @@ if mode == "👥 매니저 관리":
                 st.image(user_leaflet_path, use_container_width=True)
                 
             st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ==========================================
 # 🔒 3. 시스템 관리자 모드
@@ -646,6 +657,9 @@ elif mode == "⚙️ 시스템 관리자":
         
     st.success("인증 성공! 변경 사항은 가장 아래 [서버에 반영하기] 버튼을 눌러야 저장됩니다.")
     
+    # ---------------------------------------------------------
+    # [영역 1] 파일 업로드 및 관리
+    # ---------------------------------------------------------
     st.markdown("<h3 class='sub-title'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv', 'xlsx'])
     
@@ -674,7 +688,6 @@ elif mode == "⚙️ 시스템 관리자":
             st.success("✅ 파일 업로드 및 저장이 완료되었습니다.")
             st.rerun()
 
-    st.markdown("<br>", unsafe_allow_html=True)
     col1, col2 = st.columns([7, 3])
     with col1:
         st.markdown(f"**현재 저장된 파일 ({len(st.session_state['raw_data'])}개)**")
@@ -700,7 +713,7 @@ elif mode == "⚙️ 시스템 관리자":
             st.markdown("<hr style='margin:5px 0; opacity:0.1;'>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # 🌟 챕터 1: 주차/브릿지 시상 항목 관리
+    # 🌟 [영역 2] 주차/브릿지 시상 항목 관리
     # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 class='sub-title' style='margin-top:10px;'>🏆 2. 주차/브릿지 시상 항목 관리</h3>", unsafe_allow_html=True)
@@ -715,7 +728,7 @@ elif mode == "⚙️ 시스템 관리자":
                 st.session_state['config'].append({
                     "name": f"신규 주차 시책 {len(st.session_state['config'])+1}",
                     "desc": "", "category": "weekly", "type": "구간 시책", 
-                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_agency": "", "col_manager": "",
+                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_manager": "",
                     "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
                     "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
                 })
@@ -723,12 +736,12 @@ elif mode == "⚙️ 시스템 관리자":
                 
     with col_del_all:
         if st.button("🗑️ 모든 시상 항목 일괄 삭제", use_container_width=True):
-            st.session_state['config'].clear()
+            st.session_state['config'] = [c for c in st.session_state['config'] if c.get('category') != 'weekly']
             with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
-                json.dump([], f, ensure_ascii=False)
+                json.dump(st.session_state['config'], f, ensure_ascii=False)
             st.rerun()
 
-    weekly_cfgs = [(i, c) for i, c in enumerate(st.session_state['config']) if c['category'] == 'weekly']
+    weekly_cfgs = [(i, c) for i, c in enumerate(st.session_state['config']) if c.get('category', 'weekly') == 'weekly']
     if not weekly_cfgs:
         st.info("현재 설정된 주차/브릿지 시상이 없습니다.")
 
@@ -740,8 +753,6 @@ elif mode == "⚙️ 시스템 관리자":
         with c_del:
             if st.button("개별 삭제", key=f"del_cfg_{i}", use_container_width=True):
                 st.session_state['config'].pop(i)
-                with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
-                    json.dump(st.session_state['config'], f, ensure_ascii=False)
                 st.rerun()
         
         cfg['name'] = st.text_input(f"시책명", value=cfg['name'], key=f"name_{i}")
@@ -760,19 +771,19 @@ elif mode == "⚙️ 시스템 관리자":
             cols = st.session_state['raw_data'][cfg['file']].columns.tolist() if file_opts else []
             def get_idx(val, opts): return opts.index(val) if val in opts else 0
 
+            st.info("💡 식별을 위해 아래 컬럼들을 지정해주세요.")
             cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg.get('col_name', ''), cols), key=f"cname_{i}")
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
-            cfg['col_agency'] = st.selectbox("대리점/지사명 컬럼", cols, index=get_idx(cfg.get('col_agency', ''), cols), key=f"cagency_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
             cfg['col_manager'] = st.selectbox("매니저코드(비번) 컬럼", cols, index=get_idx(cfg.get('col_manager', ''), cols), key=f"cmgr_{i}")
             
             if "1기간" in cfg['type']:
                 cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_prev', ''), cols), key=f"cvalp_{i}")
                 cfg['col_val_curr'] = st.selectbox("당월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_curr', ''), cols), key=f"cvalc_{i}")
-                cfg['curr_req'] = st.number_input("당월 필수 달성 조건 금액", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
+                cfg['curr_req'] = st.number_input("당월 필수 달성 금액", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
             elif "2기간" in cfg['type']:
-                cfg['col_val_curr'] = st.selectbox("당월 실적 수치 컬럼", cols, index=get_idx(cfg.get('col_val_curr', ''), cols), key=f"cval_{i}")
-                cfg['curr_req'] = st.number_input("차월 필수 달성 조건 금액 (합산용)", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq_{i}")
+                cfg['col_val_curr'] = st.selectbox("당월 실적 수치 컬럼", cols, index=get_idx(cfg.get('col_val_curr', ''), cols), key=f"cvalc2_{i}")
+                cfg['curr_req'] = st.number_input("차월 필수 달성 금액 (합산용)", value=float(cfg.get('curr_req', 100000.0)), step=10000.0, key=f"creq2_{i}")
             else: 
                 cfg['col_val'] = st.selectbox("실적 수치 컬럼", cols, index=get_idx(cfg.get('col_val', ''), cols), key=f"cval_{i}")
 
@@ -792,7 +803,7 @@ elif mode == "⚙️ 시스템 관리자":
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
-    # 🌟 챕터 2: 월간 누계 시상 항목 관리
+    # 🌟 [영역 3] 월간 누계 시상 항목 관리
     # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 class='blue-title'>📈 3. 월간 누계 시상 항목 관리</h3>", unsafe_allow_html=True)
@@ -804,7 +815,7 @@ elif mode == "⚙️ 시스템 관리자":
             first_file = list(st.session_state['raw_data'].keys())[0]
             st.session_state['config'].append({
                 "name": f"신규 누계 항목 {len(st.session_state['config'])+1}",
-                "desc": "", "category": "cumulative", "type": "누계 시책", 
+                "desc": "", "category": "cumulative", "type": "누계", 
                 "file": first_file, "col_code": "", "col_val": "", "col_prize": ""
             })
             st.rerun()
@@ -814,7 +825,6 @@ elif mode == "⚙️ 시스템 관리자":
         st.info("현재 설정된 누계 항목이 없습니다.")
 
     for i, cfg in cumul_cfgs:
-        if 'col_prize' not in cfg: cfg['col_prize'] = ""
         st.markdown(f"<div class='config-box-blue'>", unsafe_allow_html=True)
         c_title, c_del = st.columns([8, 2])
         with c_title: st.markdown(f"<h3 class='config-title' style='color:#1e3c72;'>📘 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
@@ -842,7 +852,9 @@ elif mode == "⚙️ 시스템 관리자":
             
         st.markdown("</div>", unsafe_allow_html=True)
 
-
+    # ---------------------------------------------------------
+    # [영역 4] 리플렛(안내 이미지) 관리
+    # ---------------------------------------------------------
     st.divider()
     st.markdown("<h3 class='sub-title' style='margin-top:10px;'>🖼️ 4. 안내 리플렛(이미지) 등록</h3>", unsafe_allow_html=True)
     st.info("💡 실적 조회 결과 맨 아래에 보여줄 상품 안내장이나 리플렛 이미지를 등록할 수 있습니다.")
@@ -871,7 +883,7 @@ elif mode == "⚙️ 시스템 관리자":
             st.success("✅ 서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
 # ==========================================
-# 🏆 4. 사용자 모드 (일반 설계사)
+# 🏆 4. 사용자 모드 (일반 설계사 조회)
 # ==========================================
 else:
     st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
@@ -889,7 +901,12 @@ else:
                 
             df = st.session_state['raw_data'].get(cfg['file'])
             if df is not None:
-                search_name = df[cfg.get('col_name', '')].fillna('').astype(str).str.strip() if cfg.get('col_name') else pd.Series()
+                col_name = cfg.get('col_name', '')
+                col_branch = cfg.get('col_branch', '')
+                
+                search_name = df[col_name].fillna('').astype(str).str.strip() if col_name and col_name in df.columns else pd.Series()
+                if search_name.empty: continue
+                
                 name_match_condition = (search_name == user_name.strip())
                 
                 if branch_code_input.strip() == "0000": 
@@ -897,14 +914,16 @@ else:
                 else:
                     clean_code = branch_code_input.replace("지점", "").strip()
                     if clean_code:
-                        search_branch = df[cfg.get('col_branch', '')].fillna('').astype(str) if cfg.get('col_branch') else pd.Series()
+                        search_branch = df[col_branch].fillna('').astype(str) if col_branch and col_branch in df.columns else pd.Series()
+                        if search_branch.empty: continue
+                        
                         regex_pattern = rf"(?<!\d){clean_code}\s*지점"
                         match = df[name_match_condition & search_branch.str.contains(regex_pattern, regex=True)]
                     else:
                         match = pd.DataFrame()
                 
                 if not match.empty:
-                    if cfg.get('col_code'):
+                    if cfg.get('col_code') and cfg['col_code'] in df.columns:
                         for _, row in match.iterrows():
                             agent_code = safe_str(row[cfg['col_code']])
                             if agent_code: codes_found.add(agent_code)
