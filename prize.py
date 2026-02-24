@@ -28,17 +28,16 @@ if 'config' not in st.session_state:
     else:
         st.session_state['config'] = []
 
-# 기존 데이터 호환성 보장
 for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
 
-# 🌟 [핵심 오류 해결] 엑셀 외계어(_xHHHH_) 복원 및 초강력 문자열 정제 함수 🌟
+# 🌟 [오류 핵심 해결] 엑셀 외계어(_xHHHH_) 100% 자동 복원 및 정제 함수 🌟
 def safe_str(val):
     if pd.isna(val) or val is None: return ""
     
     try:
-        # 실수(Float)로 읽힌 경우 정수(Int)로 변환
+        # 소수점으로 읽힌 사번 복구 (예: 12345.0 -> 12345)
         if isinstance(val, (int, float)) and float(val).is_integer():
             val = int(float(val))
     except:
@@ -46,26 +45,28 @@ def safe_str(val):
         
     s = str(val)
     
-    # 1. 엑셀 특유의 숨겨진 유니코드 외계어(_x0033_ 등)를 원래 문자(3 등)로 100% 자동 복원
+    # 1. 엑셀의 숨겨진 16진수 외계어(_x0033_ 등)를 원래 문자(3 등)로 완벽 복원
     s = re.sub(r'_[xX]([0-9A-Fa-f]{4})_', lambda m: chr(int(m.group(1), 16)), s)
     
-    # 2. 띄어쓰기, 줄바꿈, 탭 등 눈에 보이지 않는 공백 강제 삭제
+    # 2. 보이지 않는 띄어쓰기, 엔터, 탭 강제 삭제
     s = re.sub(r'\s+', '', s)
     
-    # 3. 소수점 잔재 제거
+    # 3. 문자열에 남은 .0 잔재 제거
     if s.endswith('.0'): 
         s = s[:-2]
         
-    # 4. 영문 사번 대문자 통일
+    # 4. 알파벳 대문자 통일 (매칭률 100% 보장)
     return s.upper()
 
+def safe_float(val):
+    if pd.isna(val) or val is None: return 0.0
+    s = str(val).replace(',', '').strip()
+    try: return float(s)
+    except: return 0.0
 
 # --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응) ---
 st.markdown("""
 <style>
-    /* ========================================= */
-    /* ☀️ 기본 모드 (Light Mode) CSS             */
-    /* ========================================= */
     [data-testid="stAppViewContainer"] { background-color: #f2f4f6; color: #191f28; }
     span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
     
@@ -159,14 +160,6 @@ st.markdown("""
         border-radius: 12px !important; background-color: #e8eaed !important; color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; margin-top: 5px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; white-space: normal !important; 
     }
 
-    .del-btn-container button {
-        background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
-        height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
-    }
-
-    /* ========================================= */
-    /* 🌙 다크 모드 (Dark Mode) CSS              */
-    /* ========================================= */
     @media (prefers-color-scheme: dark) {
         [data-testid="stAppViewContainer"] { background-color: #121212 !important; color: #e0e0e0 !important; }
         label, p, .stMarkdown p { color: #e0e0e0 !important; }
@@ -194,21 +187,6 @@ st.markdown("""
         div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
     }
-    
-    @media (max-width: 450px) {
-        .summary-total { font-size: 2.1rem !important; }
-        .summary-label { font-size: 1.05rem !important; }
-        .prize-label { font-size: 1.1rem !important; }
-        .prize-value { font-size: 1.45rem !important; }
-        .data-label { font-size: 1rem !important; }
-        .data-value { font-size: 1.15rem !important; }
-        .toss-title { font-size: 1.4rem !important; }
-        .shortfall-text { font-size: 1.05rem !important; }
-        .cumul-stack-box { padding: 16px 20px; flex-direction: row; }
-        .cumul-stack-title { font-size: 1.15rem; }
-        .cumul-stack-val { font-size: 0.95rem; }
-        .cumul-stack-prize { font-size: 1.4rem; }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -234,10 +212,8 @@ def calculate_agent_performance(target_code):
             if "1기간" in p_type: 
                 raw_prev = match_df[cfg['col_val_prev']].values[0] if cfg.get('col_val_prev') in df.columns else 0
                 raw_curr = match_df[cfg['col_val_curr']].values[0] if cfg.get('col_val_curr') in df.columns else 0
-                try: val_prev = float(str(raw_prev).replace(',', ''))
-                except: val_prev = 0.0
-                try: val_curr = float(str(raw_curr).replace(',', ''))
-                except: val_curr = 0.0
+                val_prev = safe_float(raw_prev)
+                val_curr = safe_float(raw_curr)
                 
                 curr_req = float(cfg.get('curr_req', 100000.0))
                 calc_rate, tier_prev, prize = 0, 0, 0
@@ -261,8 +237,7 @@ def calculate_agent_performance(target_code):
                 
             elif "2기간" in p_type:
                 raw_curr = match_df[cfg['col_val_curr']].values[0] if cfg.get('col_val_curr') in df.columns else 0
-                try: val_curr = float(str(raw_curr).replace(',', ''))
-                except: val_curr = 0.0
+                val_curr = safe_float(raw_curr)
                 
                 curr_req = float(cfg.get('curr_req', 100000.0))
                 calc_rate, tier_achieved, prize = 0, 0, 0
@@ -291,8 +266,7 @@ def calculate_agent_performance(target_code):
 
             else: 
                 raw_val = match_df[cfg['col_val']].values[0] if cfg.get('col_val') in df.columns else 0
-                try: val = float(str(raw_val).replace(',', ''))
-                except: val = 0.0
+                val = safe_float(raw_val)
                 
                 calc_rate, tier_achieved, prize = 0, 0, 0
                 for amt, rate in cfg['tiers']:
@@ -318,13 +292,11 @@ def calculate_agent_performance(target_code):
         elif cat == 'cumulative':
             col_val = cfg.get('col_val', '')
             raw_val = match_df[col_val].values[0] if col_val and col_val in match_df.columns else 0
-            try: val = float(str(raw_val).replace(',', ''))
-            except: val = 0.0
+            val = safe_float(raw_val)
             
             col_prize = cfg.get('col_prize', '')
             raw_prize = match_df[col_prize].values[0] if col_prize and col_prize in match_df.columns else 0
-            try: prize = float(str(raw_prize).replace(',', ''))
-            except: prize = 0.0
+            prize = safe_float(raw_prize)
             
             calculated_results.append({
                 "name": cfg['name'], "desc": cfg.get('desc', ''), "category": "cumulative", "type": "누계",
@@ -467,7 +439,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 
+# 👥 2. 매니저 관리 페이지 (외계어 완벽 복원 및 버그 차단 적용)
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -481,7 +453,7 @@ if mode == "👥 매니저 관리":
                 st.warning("지원매니저 코드를 입력해주세요.")
             else:
                 is_valid = False
-                safe_input_code = safe_str(mgr_code)
+                safe_input_code = safe_str(mgr_code) # 입력한 값을 깔끔하게 정제
                 all_valid_codes = set()
                 
                 for cfg in st.session_state['config']:
@@ -489,7 +461,7 @@ if mode == "👥 매니저 관리":
                     if mgr_col:
                         df = st.session_state['raw_data'].get(cfg['file'])
                         if df is not None and mgr_col in df.columns:
-                            # 엑셀의 외계어(_xHHHH_) 코드를 모두 복원하여 정상 문자열과 비교
+                            # 엑셀의 _x0033_ 외계어 코드를 전부 사람이 읽는 정상 코드로 자동 번역하여 수집
                             for val in df[mgr_col].unique():
                                 clean_val = safe_str(val)
                                 if clean_val: all_valid_codes.add(clean_val)
@@ -499,15 +471,16 @@ if mode == "👥 매니저 관리":
                 
                 if is_valid:
                     st.session_state.mgr_logged_in = True
-                    st.session_state.mgr_code = safe_input_code 
+                    st.session_state.mgr_code = safe_input_code # 검증된 코드를 저장
                     st.session_state.mgr_step = 'main'
                     st.rerun()
                 else:
                     st.error(f"❌ 입력하신 코드({mgr_code})가 등록된 실적 데이터에 존재하지 않습니다.")
                     st.info("💡 관리자 화면에서 '지원매니저코드 컬럼'이 정확히 지정되었는지 확인해주세요.")
+                    # 이제 외계어가 아닌 '정상 번역된 사번' 예시를 보여줍니다.
                     if all_valid_codes:
                         sample_codes = ", ".join(list(all_valid_codes)[:10])
-                        st.warning(f"🧐 (참고) 현재 시스템이 복원하여 인식하고 있는 정상 코드 예시: {sample_codes}")
+                        st.warning(f"🧐 (참고) 현재 시스템이 복원하여 인식하고 있는 정상 코드 예시:\n{sample_codes}")
     else:
         if st.button("🚪 로그아웃"):
             st.session_state.mgr_logged_in = False
@@ -538,8 +511,8 @@ if mode == "👥 매니저 관리":
                 st.rerun()
             
             cat = st.session_state.mgr_category
-            st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
+            # 매니저 산하의 모든 설계사 코드를 '안전한 복원 방식'으로 수집
             my_agents = set()
             safe_login_code = st.session_state.mgr_code
             
@@ -553,15 +526,18 @@ if mode == "👥 매니저 관리":
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None or mgr_col not in df.columns or col_code not in df.columns: continue
                 
-                # 안전한 매칭 (정제된 데이터끼리 비교)
+                # 외계어가 제거된 데이터끼리 안전하게 비교
                 mask = df[mgr_col].apply(safe_str) == safe_login_code
                 match_df = df[mask]
                 
                 for ac in match_df[col_code].apply(safe_str):
                     if ac: my_agents.add(ac)
             
+            st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회 (소속: 총 {len(my_agents)}명)</h3>", unsafe_allow_html=True)
+            
+            # 🌟 [오류 해결] 50만 원 이상 달성자도 100% 잡아내기 위해 최대 범위를 무한대(inf)로 오픈 🌟
             ranges = {
-                500000: (300000, 500000), 
+                500000: (300000, float('inf')), # 30만 이상인 사람은 전부 이 폴더에 담김
                 300000: (200000, 300000), 
                 200000: (100000, 200000), 
                 100000: (0, 100000)       
@@ -573,10 +549,14 @@ if mode == "👥 매니저 관리":
                 matched_folders = set()
                 
                 for res in calc_results:
-                    if cat == "구간" and res['type'] != "구간": continue
-                    if cat == "브릿지" and res['type'] != "브릿지2": continue
+                    # 선택한 항목(구간/브릿지)만 필터링
+                    if cat == "구간" and "구간" not in res['type']: continue
+                    if cat == "브릿지" and "브릿지" not in res['type']: continue
                     
-                    val = res.get('val', 0.0)
+                    # 브릿지1, 브릿지2, 구간 상관없이 현재 실적을 명확히 뽑음
+                    val = res.get('val') if 'val' in res else res.get('val_curr', 0.0)
+                    if val is None: val = 0.0
+                    
                     for t, (min_v, max_v) in ranges.items():
                         if min_v <= val < max_v:
                             matched_folders.add(t)
@@ -585,9 +565,14 @@ if mode == "👥 매니저 관리":
                 for t in matched_folders:
                     counts[t] += 1
             
+            # 폴더 UI 렌더링
             for t, (min_v, max_v) in ranges.items():
                 count = counts[t]
-                if st.button(f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만) - 총 {count}명", use_container_width=True, key=f"t_{t}"):
+                # 최상위 구간 표시명 분기
+                if t == 500000: label = f"📁 50만 구간 근접 및 달성 (30만 이상) - 총 {count}명"
+                else: label = f"📁 {int(t//10000)}만 구간 근접자 ({int(min_v//10000)}만 이상 ~ {int(max_v//10000)}만 미만) - 총 {count}명"
+                
+                if st.button(label, use_container_width=True, key=f"t_{t}"):
                     st.session_state.mgr_step = 'list'
                     st.session_state.mgr_target = t
                     st.session_state.mgr_min_v = min_v
@@ -607,7 +592,9 @@ if mode == "👥 매니저 관리":
             max_v = st.session_state.mgr_max_v
             my_agents = st.session_state.mgr_agents
             
-            st.markdown(f"<h3 class='main-title'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
+            if target == 500000: st.markdown(f"<h3 class='main-title'>👥 50만 구간 근접 및 달성자 명단</h3>", unsafe_allow_html=True)
+            else: st.markdown(f"<h3 class='main-title'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
+            
             st.info("💡 이름을 클릭하면 상세 실적을 확인하고 카톡으로 전송할 수 있습니다.")
             
             near_agents = []
@@ -632,16 +619,18 @@ if mode == "👥 매니저 관리":
                                 break
 
                 for res in calc_results:
-                    if cat == "구간" and res['type'] != "구간": continue
-                    if cat == "브릿지" and res['type'] != "브릿지2": continue
+                    if cat == "구간" and "구간" not in res['type']: continue
+                    if cat == "브릿지" and "브릿지" not in res['type']: continue
                     
-                    val = res.get('val', 0.0)
+                    val = res.get('val') if 'val' in res else res.get('val_curr', 0.0)
+                    if val is None: val = 0.0
+                    
                     if min_v <= val < max_v:
                         near_agents.append((code, agent_name, agent_agency, val))
                         break
             
             if not near_agents:
-                st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
+                st.info(f"해당 구간에 소속 설계사가 없습니다.")
             else:
                 near_agents.sort(key=lambda x: x[3], reverse=True)
                 for code, name, agency, val in near_agents:
