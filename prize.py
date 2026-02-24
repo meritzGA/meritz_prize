@@ -32,12 +32,16 @@ for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
 
-# 🌟 데이터 매칭 오류를 완벽하게 방지하는 안전한 문자열 변환 함수 🌟
+# 🌟 [핵심 해결] 초강력 문자열 정제 함수 (매칭 오류 원천 차단) 🌟
 def safe_str(val):
     if pd.isna(val): return ""
-    s = str(val).strip()
-    if s.endswith('.0'): s = s[:-2] # 엑셀에서 사번이 12345.0 으로 뜨는 현상 방지
-    return s
+    s = str(val)
+    # 눈에 보이지 않는 띄어쓰기, 줄바꿈, 탭 완전 삭제
+    s = s.replace(' ', '').replace('\n', '').replace('\t', '')
+    # 엑셀 소수점 자동 생성 방지
+    if s.endswith('.0'): s = s[:-2]
+    # 알파벳이 섞여 있을 경우 대문자로 통일
+    return s.upper()
 
 # --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응) ---
 st.markdown("""
@@ -62,7 +66,6 @@ st.markdown("""
 
     [data-testid="stForm"] { background-color: transparent; border: none; padding: 0; margin-bottom: 24px; }
 
-    /* 공통 텍스트 타이틀 클래스 */
     .admin-title { color: #191f28; font-weight: 800; font-size: 1.8rem; margin-top: 20px; }
     .sub-title { color: #191f28; font-size: 1.4rem; margin-top: 30px; font-weight: 700; }
     .config-title { color: #191f28; font-size: 1.3rem; margin: 0; font-weight: 700; }
@@ -70,12 +73,10 @@ st.markdown("""
     .blue-title { color: #1e3c72; font-size: 1.4rem; margin-top: 10px; font-weight: 800; }
     .agent-title { color: #3182f6; font-weight: 800; font-size: 1.5rem; margin-top: 0; text-align: center; }
 
-    /* 공통 박스 클래스 */
     .config-box { background: #f9fafb; padding: 15px; border-radius: 15px; border: 1px solid #e5e8eb; margin-top: 15px; }
     .config-box-blue { background: #f0f4f8; padding: 15px; border-radius: 15px; border: 1px solid #c7d2fe; margin-top: 15px; }
     .detail-box { background: #ffffff; padding: 20px; border-radius: 20px; border: 2px solid #e5e8eb; margin-top: 10px; margin-bottom: 30px; }
 
-    /* 시책 요약 카드 (상단) */
     .summary-card { 
         background: linear-gradient(135deg, rgb(160, 20, 20) 0%, rgb(128, 0, 0) 100%); 
         border-radius: 20px; padding: 32px 24px; margin-bottom: 24px; border: none;
@@ -92,7 +93,6 @@ st.markdown("""
     .summary-item-val { color: #ffffff; font-size: 1.3rem; font-weight: 800; white-space: nowrap; }
     .summary-divider { height: 1px; background-color: rgba(255,255,255,0.2); margin: 16px 0; }
     
-    /* 개별 상세 카드 */
     .toss-card { 
         background: #ffffff; border-radius: 20px; padding: 28px 24px; 
         margin-bottom: 16px; border: 1px solid #e5e8eb; box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
@@ -104,7 +104,6 @@ st.markdown("""
     .data-label { color: #8b95a1; font-size: 1.1rem; word-break: keep-all; }
     .data-value { color: #333d4b; font-size: 1.3rem; font-weight: 600; white-space: nowrap; }
     
-    /* 상위 구간 부족 금액 강조 디자인 */
     .shortfall-row { background-color: #fff0f0; padding: 14px; border-radius: 12px; margin-top: 15px; margin-bottom: 5px; border: 2px dashed #ff4b4b; text-align: center; }
     .shortfall-text { color: #d9232e; font-size: 1.2rem; font-weight: 800; word-break: keep-all; }
 
@@ -115,7 +114,6 @@ st.markdown("""
     .toss-divider { height: 1px; background-color: #e5e8eb; margin: 16px 0; }
     .sub-data { font-size: 1rem; color: #8b95a1; margin-top: 4px; text-align: right; }
     
-    /* 누계 전용 세로 정렬 박스 */
     .cumul-stack-box {
         background: #ffffff; border: 1px solid #e5e8eb; border-left: 6px solid #2a5298; 
         border-radius: 16px; padding: 20px 24px; margin-bottom: 16px; 
@@ -127,7 +125,6 @@ st.markdown("""
     .cumul-stack-val { font-size: 1.05rem; color: #8b95a1; }
     .cumul-stack-prize { font-size: 1.6rem; color: #d9232e; font-weight: 800; text-align: right; white-space: nowrap; }
     
-    /* 입력 컴포넌트 */
     div[data-testid="stTextInput"] input {
         font-size: 1.3rem !important; padding: 15px !important; height: 55px !important;
         background-color: #ffffff !important; color: #191f28 !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.02);
@@ -135,7 +132,6 @@ st.markdown("""
     div[data-testid="stSelectbox"] > div { background-color: #ffffff !important; border: 1px solid #e5e8eb !important; border-radius: 12px !important; }
     div[data-testid="stSelectbox"] * { font-size: 1.1rem !important; }
     
-    /* 버튼 */
     div.stButton > button[kind="primary"] {
         font-size: 1.4rem !important; font-weight: 800 !important; height: 60px !important;
         border-radius: 12px !important; background-color: rgb(128, 0, 0) !important; color: white !important; border: none !important; width: 100%; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(128, 0, 0, 0.2) !important;
@@ -146,7 +142,6 @@ st.markdown("""
         border-radius: 12px !important; background-color: #e8eaed !important; color: #191f28 !important; border: 1px solid #d1d6db !important; width: 100%; margin-top: 5px; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important; white-space: normal !important; 
     }
 
-    /* 삭제 버튼 전용 스타일 */
     .del-btn-container button {
         background-color: #f2f4f6 !important; color: #dc3545 !important; border: 1px solid #dc3545 !important;
         height: 40px !important; font-size: 1rem !important; margin-top: 0 !important; box-shadow: none !important;
@@ -182,6 +177,21 @@ st.markdown("""
         div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
     }
+    
+    @media (max-width: 450px) {
+        .summary-total { font-size: 2.1rem !important; }
+        .summary-label { font-size: 1.05rem !important; }
+        .prize-label { font-size: 1.1rem !important; }
+        .prize-value { font-size: 1.45rem !important; }
+        .data-label { font-size: 1rem !important; }
+        .data-value { font-size: 1.15rem !important; }
+        .toss-title { font-size: 1.4rem !important; }
+        .shortfall-text { font-size: 1.05rem !important; }
+        .cumul-stack-box { padding: 16px 20px; flex-direction: row; }
+        .cumul-stack-title { font-size: 1.15rem; }
+        .cumul-stack-val { font-size: 0.95rem; }
+        .cumul-stack-prize { font-size: 1.4rem; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -197,6 +207,7 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code or col_code not in df.columns: continue
         
+        # 🌟 안전한 정제 후 데이터 필터링 🌟
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
@@ -440,7 +451,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 (에러 해결: 로그인 검증 및 근접자 로직 완벽 복구)
+# 👥 2. 매니저 관리 페이지 (오류 완벽 해결 버전)
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -453,14 +464,18 @@ if mode == "👥 매니저 관리":
             if not mgr_code:
                 st.warning("지원매니저 코드를 입력해주세요.")
             else:
-                # 🌟 오류 해결 1: 등록된 데이터에 매니저 코드가 존재하는지 꼼꼼히 검증 후 로그인 🌟
+                # 🌟 [오류 해결] 엑셀 데이터에 해당 매니저 코드가 존재하는지 '정제된 문자열'로 리스트 화 하여 철저히 검증 🌟
                 is_valid = False
+                safe_input_code = safe_str(mgr_code)
+                
                 for cfg in st.session_state['config']:
-                    mgr_col = cfg.get('col_manager_code', '')
+                    mgr_col = cfg.get('col_manager_code', '') or cfg.get('col_manager', '')
                     if mgr_col:
                         df = st.session_state['raw_data'].get(cfg['file'])
                         if df is not None and mgr_col in df.columns:
-                            if safe_str(mgr_code) in df[mgr_col].apply(safe_str).values:
+                            # Pandas Series 비교의 오류를 막기 위해 리스트로 빼서 직접 확인
+                            valid_codes_list = [safe_str(x) for x in df[mgr_col].tolist()]
+                            if safe_input_code in valid_codes_list:
                                 is_valid = True
                                 break
                 
@@ -503,26 +518,28 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 🌟 오류 해결 2: 해당 매니저 산하의 모든 설계사 사번을 안전하게 수집 🌟
+            # 🌟 [오류 해결] 해당 매니저 산하의 모든 설계사 사번을 안전하게 수집 🌟
             my_agents = set()
+            safe_login_code = safe_str(st.session_state.mgr_code)
+            
             for cfg in st.session_state['config']:
                 if cfg.get('category') == 'cumulative': continue
-                if cat == "구간" and "구간" not in cfg['type']: continue
-                if cat == "브릿지" and "2기간" not in cfg['type']: continue # 브릿지 2기간만 수집
                 
-                mgr_col = cfg.get('col_manager_code', '')
+                mgr_col = cfg.get('col_manager_code', '') or cfg.get('col_manager', '')
                 col_code = cfg.get('col_code', '')
                 if not mgr_col or not col_code: continue 
                 
                 df = st.session_state['raw_data'].get(cfg['file'])
-                if df is None or mgr_col not in df.columns: continue
+                if df is None or mgr_col not in df.columns or col_code not in df.columns: continue
                 
-                match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
-                if col_code in df.columns:
-                    for ac in match_df[col_code].apply(safe_str):
-                        if ac: my_agents.add(ac)
+                # 정제된 코드로 매칭
+                mask = df[mgr_col].apply(safe_str) == safe_login_code
+                match_df = df[mask]
+                
+                for ac in match_df[col_code].apply(safe_str):
+                    if ac: my_agents.add(ac)
             
-            # 🌟 폴더 범위 지정 (팀장님 요청 하드코딩 구조 100% 유지) 🌟
+            # 폴더 범위 지정
             ranges = {
                 500000: (300000, 500000), 
                 300000: (200000, 300000), 
@@ -531,14 +548,14 @@ if mode == "👥 매니저 관리":
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
-            # 🌟 오류 해결 3: 정확히 구간과 브릿지 2기간의 'val' 값만 추적해서 폴더에 담기 🌟
+            # 🌟 [오류 해결] 정확히 구간과 브릿지 2기간의 'val' 값만 추적해서 폴더에 담기 🌟
             for agent_code in my_agents:
                 calc_results, _ = calculate_agent_performance(agent_code)
                 matched_folders = set()
                 
                 for res in calc_results:
                     if cat == "구간" and res['type'] != "구간": continue
-                    if cat == "브릿지" and res['type'] != "브릿지2": continue
+                    if cat == "브릿지" and res['type'] != "브릿지2": continue # 브릿지 관리는 2기간(차월 조건) 기준
                     
                     val = res.get('val', 0.0)
                     for t, (min_v, max_v) in ranges.items():
@@ -586,7 +603,8 @@ if mode == "👥 매니저 관리":
                     if cfg.get('col_code') and cfg.get('col_name'):
                         df = st.session_state['raw_data'].get(cfg['file'])
                         if df is not None:
-                            match_df = df[df[cfg['col_code']].apply(safe_str) == code]
+                            mask = df[cfg['col_code']].apply(safe_str) == code
+                            match_df = df[mask]
                             if not match_df.empty:
                                 agent_name = safe_str(match_df[cfg['col_name']].values[0])
                                 br = cfg.get('col_branch','')
@@ -638,6 +656,7 @@ if mode == "👥 매니저 관리":
                 st.image(user_leaflet_path, use_container_width=True)
                 
             st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ==========================================
 # 🔒 3. 시스템 관리자 모드
@@ -771,8 +790,8 @@ elif mode == "⚙️ 시스템 관리자":
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
             
-            # 🌟 관리자 화면: 매니저 컬럼명 통일 🌟
-            cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', ''), cols), key=f"cmgrcode_{i}")
+            # 🌟 관리자 화면에서 지원매니저코드 컬럼명을 일관되게 'col_manager_code'로 저장 🌟
+            cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', cfg.get('col_manager', '')), cols), key=f"cmgrcode_{i}")
             
             if "1기간" in cfg['type']:
                 cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_prev', ''), cols), key=f"cvalp_{i}")
