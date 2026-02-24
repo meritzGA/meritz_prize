@@ -410,7 +410,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     if weekly_res:
         summary_html = (
             f"<div class='summary-card'>"
-            f"<div class='summary-label'>{user_name} 팀장님의 진행 중인 시책 예상 시상</div>"
+            f"<div class='summary-label'>{user_name} 팀장님의 시책 현황</div>"
             f"<div class='summary-total'>{weekly_total:,.0f}원</div>"
             f"<div class='summary-divider'></div>"
         )
@@ -488,7 +488,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
     if cumul_res:
         cumul_html = (
             f"<div class='cumulative-card'>"
-            f"<div class='summary-label'>{user_name} 팀장님의 월간 확정(누계) 시상</div>"
+            f"<div class='summary-label'>{user_name} 팀장님의 월간 누계 시상</div>"
             f"<div class='summary-total'>{cumul_total:,.0f}원</div>"
             f"<div class='summary-divider'></div>"
         )
