@@ -472,10 +472,49 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
             )
         st.markdown(stack_html, unsafe_allow_html=True)
 
-    if show_share_text:
+if show_share_text:
         st.markdown("<h4 class='main-title' style='margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
-        st.info("💡 아래 텍스트 박스 안의 글자를 복사해서, 해당 설계사의 카톡 창에 붙여넣기 하시면 바로 시상 내용을 보여줄 수 있습니다.")
-        st.text_area("카카오톡 복사용 텍스트", value=share_text, height=350)
+        st.info("💡 아래 [복사하기] 버튼을 누르면 전체 내용이 복사되어 카톡 창에 바로 붙여넣기 할 수 있습니다.")
+        st.text_area("카카오톡 복사용 텍스트 (수정 가능)", value=share_text, height=350)
+        
+        # 파이썬의 문자열을 자바스크립트에서 안전하게 읽을 수 있도록 변환
+        safe_share_text = json.dumps(share_text)
+        
+        # HTML/JS를 이용한 클립보드 복사 버튼 생성 (카카오톡 스타일 적용)
+        copy_html = f"""
+        <script>
+        function copyToClipboard() {{
+            // 임시 텍스트 공간을 만들어 복사 수행 (보안 우회)
+            const textArea = document.createElement("textarea");
+            textArea.value = {safe_share_text};
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            
+            // 클릭 시 버튼 문구 및 색상 변경 (시각적 피드백)
+            const btn = document.getElementById("copyBtn");
+            btn.innerHTML = "✅ 복사 완료! (카톡 입력창에 Ctrl+V 하세요)";
+            btn.style.backgroundColor = "#e5e8eb";
+            
+            // 3초 후 원래 상태로 복귀
+            setTimeout(() => {{
+                btn.innerHTML = "💬 카카오톡 텍스트 복사하기";
+                btn.style.backgroundColor = "#FEE500";
+            }}, 3000);
+        }}
+        </script>
+        
+        <button id="copyBtn" onclick="copyToClipboard()" 
+                style="width: 100%; height: 60px; font-size: 1.3rem; font-weight: 800; 
+                       background-color: #FEE500; color: #191f28; border: none; 
+                       border-radius: 12px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+                       font-family: 'Pretendard', sans-serif;">
+            💬 카카오톡 텍스트 복사하기
+        </button>
+        """
+        # Streamlit 컴포넌트를 통해 HTML 버튼 화면에 출력
+        st.components.v1.html(copy_html, height=80)
 
 
 # ==========================================
