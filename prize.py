@@ -32,14 +32,14 @@ for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
 
-# 🌟 데이터 매칭 오류를 완벽하게 방지하는 안전한 문자열 변환 함수 🌟
+# 엑셀 사번(코드) 소수점(.0) 자동 제거용 안전 함수
 def safe_str(val):
     if pd.isna(val): return ""
     s = str(val).strip()
-    if s.endswith('.0'): s = s[:-2] # 엑셀에서 사번이 12345.0 으로 뜨는 현상 방지
+    if s.endswith('.0'): s = s[:-2]
     return s
 
-# --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응) ---
+# --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응 및 하얀 박스 버그 차단) ---
 st.markdown("""
 <style>
     /* ========================================= */
@@ -176,21 +176,6 @@ st.markdown("""
         div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
     }
-    
-    @media (max-width: 450px) {
-        .summary-total { font-size: 2.1rem !important; }
-        .summary-label { font-size: 1.05rem !important; }
-        .prize-label { font-size: 1.1rem !important; }
-        .prize-value { font-size: 1.45rem !important; }
-        .data-label { font-size: 1rem !important; }
-        .data-value { font-size: 1.15rem !important; }
-        .toss-title { font-size: 1.4rem !important; }
-        .shortfall-text { font-size: 1.05rem !important; }
-        .cumul-stack-box { padding: 16px 20px; flex-direction: row; }
-        .cumul-stack-title { font-size: 1.15rem; }
-        .cumul-stack-val { font-size: 0.95rem; }
-        .cumul-stack-prize { font-size: 1.4rem; }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -206,7 +191,6 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code or col_code not in df.columns: continue
         
-        # 🌟 안전한 문자열 변환 후 매칭 🌟
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
@@ -497,14 +481,16 @@ if mode == "👥 매니저 관리":
             st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
             # 🌟 1. 이 매니저 산하의 모든 설계사 코드를 '안전한 문자열 방식'으로 수집 🌟
+            # (버그 원인 해결: col_manager와 col_manager_code 둘 다 허용)
             agents = {}
             for cfg in st.session_state['config']:
-                mgr_col = cfg.get('col_manager_code', '') # 관리자 화면의 '지원매니저코드 컬럼'과 매칭
-                if not mgr_col: continue
+                mgr_col = cfg.get('col_manager', '')
+                if not mgr_col: continue # 관리자 설정에서 지정된 매니저 컬럼
+                
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None or mgr_col not in df.columns: continue
                 
-                # 매니저 사번 필터링 (safe_str로 소수점 제거 후 문자열 비교)
+                # 매니저 사번 필터링
                 match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
                 col_code = cfg.get('col_code', '')
                 if col_code and col_code in df.columns:
@@ -512,7 +498,7 @@ if mode == "👥 매니저 관리":
                         code = safe_str(row.get(col_code))
                         if code: agents[code] = True
             
-            # 🌟 2. 폴더 범위 지정 🌟
+            # 🌟 2. 하드코딩된 폴더(50,30,20,10) 유지 및 누락 공백 방지 범위 지정 🌟
             ranges = {
                 500000: (300000, 500000), 
                 300000: (200000, 300000), 
@@ -521,7 +507,7 @@ if mode == "👥 매니저 관리":
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
-            # 🌟 3. 설계사별로 어떤 폴더에 들어가는지 파악 🌟
+            # 🌟 3. 각 설계사별로 어떤 폴더에 들어가는지 파악 🌟
             if agents:
                 for code in agents.keys():
                     calc_results, _ = calculate_agent_performance(code)
@@ -569,7 +555,7 @@ if mode == "👥 매니저 관리":
             
             agents = {}
             for cfg in st.session_state['config']:
-                mgr_col = cfg.get('col_manager_code', '') # 지원매니저코드 컬럼으로 매칭
+                mgr_col = cfg.get('col_manager', '')
                 if not mgr_col: continue
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None or mgr_col not in df.columns: continue
@@ -613,6 +599,7 @@ if mode == "👥 매니저 관리":
                 if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
+                    # 부족 금액이 적을수록(실적이 높을수록) 상단에 배치
                     near_agents.sort(key=lambda x: x[3], reverse=True)
                     for code, name, agency, val in near_agents:
                         display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
@@ -728,7 +715,7 @@ elif mode == "⚙️ 시스템 관리자":
                 st.session_state['config'].append({
                     "name": f"신규 주차 시책 {len(st.session_state['config'])+1}",
                     "desc": "", "category": "weekly", "type": "구간 시책", 
-                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_manager_code": "",
+                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_manager": "",
                     "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
                     "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
                 })
@@ -776,8 +763,8 @@ elif mode == "⚙️ 시스템 관리자":
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
             
-            # 🌟 관리자 화면에서 지원매니저코드만 받도록 수정 🌟
-            cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', ''), cols), key=f"cmgrcode_{i}")
+            # 🌟 관리자 화면에서 지원매니저코드 컬럼명을 일관되게 'col_manager'로 저장 (오류의 핵심 원인 해결) 🌟
+            cfg['col_manager'] = st.selectbox("매니저코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_manager', ''), cols), key=f"cmgr_{i}")
             
             if "1기간" in cfg['type']:
                 cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_prev', ''), cols), key=f"cvalp_{i}")
