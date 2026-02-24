@@ -182,21 +182,6 @@ st.markdown("""
         div[data-testid="stSelectbox"] > div { background-color: #1e1e1e !important; color: #ffffff !important; border-color: #444 !important; }
         div.stButton > button[kind="secondary"] { background-color: #2d2d2d !important; color: #ffffff !important; border-color: #444 !important; }
     }
-    
-    @media (max-width: 450px) {
-        .summary-total { font-size: 2.1rem !important; }
-        .summary-label { font-size: 1.05rem !important; }
-        .prize-label { font-size: 1.1rem !important; }
-        .prize-value { font-size: 1.45rem !important; }
-        .data-label { font-size: 1rem !important; }
-        .data-value { font-size: 1.15rem !important; }
-        .toss-title { font-size: 1.4rem !important; }
-        .shortfall-text { font-size: 1.05rem !important; }
-        .cumul-stack-box { padding: 16px 20px; flex-direction: row; }
-        .cumul-stack-title { font-size: 1.15rem; }
-        .cumul-stack-val { font-size: 0.95rem; }
-        .cumul-stack-prize { font-size: 1.4rem; }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -455,7 +440,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 (기존 폴더 UI 완벽 보존 + 매칭 로직 완벽 복구)
+# 👥 2. 매니저 관리 페이지 (에러 해결: 로그인 검증 및 근접자 로직 완벽 복구)
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -465,10 +450,27 @@ if mode == "👥 매니저 관리":
     if not st.session_state.mgr_logged_in:
         mgr_code = st.text_input("지원매니저 사번(코드)을 입력하세요", type="password", placeholder="예: 12345")
         if st.button("로그인", type="primary"):
-            st.session_state.mgr_logged_in = True
-            st.session_state.mgr_code = mgr_code
-            st.session_state.mgr_step = 'main'
-            st.rerun()
+            if not mgr_code:
+                st.warning("지원매니저 코드를 입력해주세요.")
+            else:
+                # 🌟 오류 해결 1: 등록된 데이터에 매니저 코드가 존재하는지 꼼꼼히 검증 후 로그인 🌟
+                is_valid = False
+                for cfg in st.session_state['config']:
+                    mgr_col = cfg.get('col_manager_code', '')
+                    if mgr_col:
+                        df = st.session_state['raw_data'].get(cfg['file'])
+                        if df is not None and mgr_col in df.columns:
+                            if safe_str(mgr_code) in df[mgr_col].apply(safe_str).values:
+                                is_valid = True
+                                break
+                
+                if is_valid:
+                    st.session_state.mgr_logged_in = True
+                    st.session_state.mgr_code = mgr_code
+                    st.session_state.mgr_step = 'main'
+                    st.rerun()
+                else:
+                    st.error("❌ 입력하신 매니저 코드가 등록된 실적 데이터에 존재하지 않습니다.")
     else:
         if st.button("🚪 로그아웃"):
             st.session_state.mgr_logged_in = False
@@ -501,25 +503,26 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 🌟 1. 버그 픽스: 관리자 설정에서 지정한 매니저 컬럼명을 확실하게 찾기 🌟
-            agents = {}
+            # 🌟 오류 해결 2: 해당 매니저 산하의 모든 설계사 사번을 안전하게 수집 🌟
+            my_agents = set()
             for cfg in st.session_state['config']:
-                # col_manager_code 나 col_manager 둘 다 인식하도록 보완
-                mgr_col = cfg.get('col_manager_code', '') or cfg.get('col_manager', '')
-                if not mgr_col: continue 
+                if cfg.get('category') == 'cumulative': continue
+                if cat == "구간" and "구간" not in cfg['type']: continue
+                if cat == "브릿지" and "2기간" not in cfg['type']: continue # 브릿지 2기간만 수집
+                
+                mgr_col = cfg.get('col_manager_code', '')
+                col_code = cfg.get('col_code', '')
+                if not mgr_col or not col_code: continue 
                 
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None or mgr_col not in df.columns: continue
                 
-                # 매니저 사번 필터링
                 match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
-                col_code = cfg.get('col_code', '')
-                if col_code and col_code in df.columns:
-                    for _, row in match_df.iterrows():
-                        code = safe_str(row.get(col_code))
-                        if code: agents[code] = True
+                if col_code in df.columns:
+                    for ac in match_df[col_code].apply(safe_str):
+                        if ac: my_agents.add(ac)
             
-            # 🌟 2. 하드코딩된 폴더(50,30,20,10) 유지 및 누락 공백 방지 범위 지정 🌟
+            # 🌟 폴더 범위 지정 (팀장님 요청 하드코딩 구조 100% 유지) 🌟
             ranges = {
                 500000: (300000, 500000), 
                 300000: (200000, 300000), 
@@ -528,27 +531,23 @@ if mode == "👥 매니저 관리":
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
-            # 🌟 3. 각 설계사별로 어떤 폴더에 들어가는지 파악 🌟
-            if agents:
-                for code in agents.keys():
-                    calc_results, _ = calculate_agent_performance(code)
-                    matched_folders = set()
+            # 🌟 오류 해결 3: 정확히 구간과 브릿지 2기간의 'val' 값만 추적해서 폴더에 담기 🌟
+            for agent_code in my_agents:
+                calc_results, _ = calculate_agent_performance(agent_code)
+                matched_folders = set()
+                
+                for res in calc_results:
+                    if cat == "구간" and res['type'] != "구간": continue
+                    if cat == "브릿지" and res['type'] != "브릿지2": continue
                     
-                    for res in calc_results:
-                        if cat == "구간" and res['type'] != "구간": continue
-                        if cat == "브릿지" and "브릿지" not in res['type']: continue
-                        if res['category'] == 'cumulative': continue
-                        
-                        val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
-                        if val is None: val = 0.0
-                        
-                        for t, (min_v, max_v) in ranges.items():
-                            if min_v <= val < max_v:
-                                matched_folders.add(t)
-                                break
-                                
-                    for t in matched_folders:
-                        counts[t] += 1
+                    val = res.get('val', 0.0)
+                    for t, (min_v, max_v) in ranges.items():
+                        if min_v <= val < max_v:
+                            matched_folders.add(t)
+                            break
+                            
+                for t in matched_folders:
+                    counts[t] += 1
             
             # 폴더 UI 렌더링
             for t, (min_v, max_v) in ranges.items():
@@ -558,6 +557,7 @@ if mode == "👥 매니저 관리":
                     st.session_state.mgr_target = t
                     st.session_state.mgr_min_v = min_v
                     st.session_state.mgr_max_v = max_v
+                    st.session_state.mgr_agents = my_agents # 수집된 사번 목록 전달
                     st.rerun()
                 
         # --- (3) 선택한 폴더 내 설계사 명단 확인 ---
@@ -570,65 +570,53 @@ if mode == "👥 매니저 관리":
             target = st.session_state.mgr_target
             min_v = st.session_state.mgr_min_v
             max_v = st.session_state.mgr_max_v
+            my_agents = st.session_state.mgr_agents
             
             st.markdown(f"<h3 class='main-title'>👥 {int(target//10000)}만 구간 근접자 명단</h3>", unsafe_allow_html=True)
             st.info("💡 이름을 클릭하면 상세 실적을 확인하고 카톡으로 전송할 수 있습니다.")
             
-            agents = {}
-            for cfg in st.session_state['config']:
-                mgr_col = cfg.get('col_manager_code', '') or cfg.get('col_manager', '')
-                if not mgr_col: continue
-                df = st.session_state['raw_data'].get(cfg['file'])
-                if df is None or mgr_col not in df.columns: continue
+            near_agents = []
+            for code in my_agents:
+                calc_results, _ = calculate_agent_performance(code)
                 
-                match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
-                col_code = cfg.get('col_code', '')
-                col_name = cfg.get('col_name', '')
-                col_agency = cfg.get('col_agency', '')
-                col_branch = cfg.get('col_branch', '')
-                
-                if col_code and col_code in df.columns:
-                    for _, row in match_df.iterrows():
-                        code = safe_str(row.get(col_code))
-                        name = safe_str(row.get(col_name)) if col_name and col_name in df.columns else "이름없음"
-                        agency = safe_str(row.get(col_agency)) if col_agency and col_agency in df.columns else ""
-                        if not agency and col_branch and col_branch in df.columns:
-                            agency = safe_str(row.get(col_branch))
-                        if code and name: agents[code] = {"name": name, "agency": agency}
-            
-            if not agents:
-                st.error("⚠️ 소속된 설계사가 없거나 매니저 정보가 일치하지 않습니다.")
-            else:
-                near_agents = []
-                for code, info in agents.items():
-                    name = info['name']
-                    agency = info['agency']
-                    calc_results, _ = calculate_agent_performance(code)
+                # 원본 엑셀에서 이름과 소속지점 찾아오기
+                agent_name = "이름없음"
+                agent_agency = ""
+                for cfg in st.session_state['config']:
+                    if cfg.get('col_code') and cfg.get('col_name'):
+                        df = st.session_state['raw_data'].get(cfg['file'])
+                        if df is not None:
+                            match_df = df[df[cfg['col_code']].apply(safe_str) == code]
+                            if not match_df.empty:
+                                agent_name = safe_str(match_df[cfg['col_name']].values[0])
+                                br = cfg.get('col_branch','')
+                                ag = cfg.get('col_agency','')
+                                if ag and ag in df.columns: agent_agency = safe_str(match_df[ag].values[0])
+                                elif br and br in df.columns: agent_agency = safe_str(match_df[br].values[0])
+                                break
+
+                # 폴더 조건에 맞는지 확인 후 명단 추가
+                for res in calc_results:
+                    if cat == "구간" and res['type'] != "구간": continue
+                    if cat == "브릿지" and res['type'] != "브릿지2": continue
                     
-                    for res in calc_results:
-                        if cat == "구간" and res['type'] != "구간": continue
-                        if cat == "브릿지" and "브릿지" not in res['type']: continue
-                        if res['category'] == 'cumulative': continue
-                        
-                        val = res.get('val') if res['type'] in ['구간', '브릿지2'] else res.get('val_curr')
-                        if val is None: val = 0.0
-                        
-                        if min_v <= val < max_v:
-                            near_agents.append((code, name, agency, val))
-                            break # 여러 시책이 해당돼도 목록에는 1번만 표시
-                
-                if not near_agents:
-                    st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
-                else:
-                    # 부족 금액이 적을수록(실적이 높을수록) 상단에 배치
-                    near_agents.sort(key=lambda x: x[3], reverse=True)
-                    for code, name, agency, val in near_agents:
-                        display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
-                        if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
-                            st.session_state.mgr_selected_code = code
-                            st.session_state.mgr_selected_name = f"[{agency}] {name}"
-                            st.session_state.mgr_step = 'detail'
-                            st.rerun()
+                    val = res.get('val', 0.0)
+                    if min_v <= val < max_v:
+                        near_agents.append((code, agent_name, agent_agency, val))
+                        break # 한 명단에 중복 표시 방지
+            
+            if not near_agents:
+                st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
+            else:
+                # 실적이 높은 순(부족금액이 적은 순)으로 정렬
+                near_agents.sort(key=lambda x: x[3], reverse=True)
+                for code, name, agency, val in near_agents:
+                    display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
+                    if st.button(display_text, use_container_width=True, key=f"btn_{code}"):
+                        st.session_state.mgr_selected_code = code
+                        st.session_state.mgr_selected_name = f"[{agency}] {name}"
+                        st.session_state.mgr_step = 'detail'
+                        st.rerun()
 
         # --- (4) 상세 내역 및 카톡 공유 ---
         elif step == 'detail':
@@ -650,7 +638,6 @@ if mode == "👥 매니저 관리":
                 st.image(user_leaflet_path, use_container_width=True)
                 
             st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ==========================================
 # 🔒 3. 시스템 관리자 모드
@@ -784,8 +771,8 @@ elif mode == "⚙️ 시스템 관리자":
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
             
-            # 🌟 관리자 화면에서 지원매니저코드 컬럼명을 일관되게 'col_manager_code'로 저장 (오류의 핵심 원인 해결) 🌟
-            cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', cfg.get('col_manager', '')), cols), key=f"cmgrcode_{i}")
+            # 🌟 관리자 화면: 매니저 컬럼명 통일 🌟
+            cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', ''), cols), key=f"cmgrcode_{i}")
             
             if "1기간" in cfg['type']:
                 cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_prev', ''), cols), key=f"cvalp_{i}")
