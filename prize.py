@@ -32,11 +32,11 @@ for c in st.session_state['config']:
     if 'category' not in c:
         c['category'] = 'weekly'
 
-# 엑셀 사번(코드) 소수점(.0) 자동 제거용 안전 함수
+# 🌟 데이터 매칭 오류를 완벽하게 방지하는 안전한 문자열 변환 함수 🌟
 def safe_str(val):
     if pd.isna(val): return ""
     s = str(val).strip()
-    if s.endswith('.0'): s = s[:-2]
+    if s.endswith('.0'): s = s[:-2] # 엑셀에서 사번이 12345.0 으로 뜨는 현상 방지
     return s
 
 # --- 🎨 커스텀 CSS (라이트/다크모드 완벽 대응) ---
@@ -206,6 +206,7 @@ def calculate_agent_performance(target_code):
         col_code = cfg.get('col_code', '')
         if not col_code or col_code not in df.columns: continue
         
+        # 🌟 안전한 문자열 변환 후 매칭 🌟
         match_df = df[df[col_code].apply(safe_str) == safe_str(target_code)]
         if match_df.empty: continue
         
@@ -449,7 +450,7 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
 
 # ==========================================
-# 👥 2. 매니저 관리 페이지 (기존 폴더 UI 완벽 보존 + 결함 수정)
+# 👥 2. 매니저 관리 페이지 (기존 폴더 UI 완벽 보존 + 매칭 로직 수정)
 # ==========================================
 if mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
@@ -495,15 +496,15 @@ if mode == "👥 매니저 관리":
             cat = st.session_state.mgr_category
             st.markdown(f"<h3 class='main-title'>📁 {cat}실적 근접자 조회</h3>", unsafe_allow_html=True)
             
-            # 🌟 1. 이 매니저 산하의 모든 설계사 코드를 완벽하게 수집 🌟
+            # 🌟 1. 이 매니저 산하의 모든 설계사 코드를 '안전한 문자열 방식'으로 수집 🌟
             agents = {}
             for cfg in st.session_state['config']:
-                mgr_col = cfg.get('col_manager', '')
+                mgr_col = cfg.get('col_manager_code', '') # 관리자 화면의 '지원매니저코드 컬럼'과 매칭
                 if not mgr_col: continue
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None or mgr_col not in df.columns: continue
                 
-                # 매니저 사번으로 필터링
+                # 매니저 사번 필터링 (safe_str로 소수점 제거 후 문자열 비교)
                 match_df = df[df[mgr_col].apply(safe_str) == safe_str(st.session_state.mgr_code)]
                 col_code = cfg.get('col_code', '')
                 if col_code and col_code in df.columns:
@@ -511,20 +512,20 @@ if mode == "👥 매니저 관리":
                         code = safe_str(row.get(col_code))
                         if code: agents[code] = True
             
-            # 🌟 2. 하드코딩된 폴더(50,30,20,10)를 유지하되, 누락 공백을 없앤 완벽한 범위 지정 🌟
+            # 🌟 2. 폴더 범위 지정 🌟
             ranges = {
-                500000: (300000, 500000), # 30만 달성 후 50만 도전중인 사람
-                300000: (200000, 300000), # 20만 달성 후 30만 도전중인 사람
-                200000: (100000, 200000), # 10만 달성 후 20만 도전중인 사람
-                100000: (0, 100000)       # 0만 달성 후 10만 도전중인 사람
+                500000: (300000, 500000), 
+                300000: (200000, 300000), 
+                200000: (100000, 200000), 
+                100000: (0, 100000)       
             }
             counts = {500000: 0, 300000: 0, 200000: 0, 100000: 0}
             
-            # 🌟 3. 각 설계사별로 중복 계산을 막고, 어떤 폴더에 들어가는지 파악 🌟
+            # 🌟 3. 설계사별로 어떤 폴더에 들어가는지 파악 🌟
             if agents:
                 for code in agents.keys():
                     calc_results, _ = calculate_agent_performance(code)
-                    matched_folders = set() # 한 설계사가 여러 시책에서 동일 폴더면 1명으로만 카운트
+                    matched_folders = set()
                     
                     for res in calc_results:
                         if cat == "구간" and res['type'] != "구간": continue
@@ -568,7 +569,7 @@ if mode == "👥 매니저 관리":
             
             agents = {}
             for cfg in st.session_state['config']:
-                mgr_col = cfg.get('col_manager', '')
+                mgr_col = cfg.get('col_manager_code', '') # 지원매니저코드 컬럼으로 매칭
                 if not mgr_col: continue
                 df = st.session_state['raw_data'].get(cfg['file'])
                 if df is None or mgr_col not in df.columns: continue
@@ -612,7 +613,6 @@ if mode == "👥 매니저 관리":
                 if not near_agents:
                     st.info(f"해당 구간({int(target//10000)}만)에 근접한 소속 설계사가 없습니다.")
                 else:
-                    # 부족 금액이 적을수록(실적이 높을수록) 상단에 배치
                     near_agents.sort(key=lambda x: x[3], reverse=True)
                     for code, name, agency, val in near_agents:
                         display_text = f"👤 [{agency}] {name} 설계사님 (현재 {val:,.0f}원)"
@@ -728,7 +728,7 @@ elif mode == "⚙️ 시스템 관리자":
                 st.session_state['config'].append({
                     "name": f"신규 주차 시책 {len(st.session_state['config'])+1}",
                     "desc": "", "category": "weekly", "type": "구간 시책", 
-                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_manager": "",
+                    "file": first_file, "col_name": "", "col_code": "", "col_branch": "", "col_manager_code": "",
                     "col_val": "", "col_val_prev": "", "col_val_curr": "", "curr_req": 100000.0,
                     "tiers": [(100000, 100), (200000, 200), (300000, 200), (500000, 300)]
                 })
@@ -775,7 +775,9 @@ elif mode == "⚙️ 시스템 관리자":
             cfg['col_name'] = st.selectbox("성명 컬럼", cols, index=get_idx(cfg.get('col_name', ''), cols), key=f"cname_{i}")
             cfg['col_branch'] = st.selectbox("지점명(조직) 컬럼", cols, index=get_idx(cfg.get('col_branch', ''), cols), key=f"cbranch_{i}")
             cfg['col_code'] = st.selectbox("설계사코드(사번) 컬럼", cols, index=get_idx(cfg.get('col_code', ''), cols), key=f"ccode_{i}")
-            cfg['col_manager'] = st.selectbox("매니저코드(비번) 컬럼", cols, index=get_idx(cfg.get('col_manager', ''), cols), key=f"cmgr_{i}")
+            
+            # 🌟 관리자 화면에서 지원매니저코드만 받도록 수정 🌟
+            cfg['col_manager_code'] = st.selectbox("지원매니저코드 컬럼", cols, index=get_idx(cfg.get('col_manager_code', ''), cols), key=f"cmgrcode_{i}")
             
             if "1기간" in cfg['type']:
                 cfg['col_val_prev'] = st.selectbox("전월 실적 컬럼", cols, index=get_idx(cfg.get('col_val_prev', ''), cols), key=f"cvalp_{i}")
