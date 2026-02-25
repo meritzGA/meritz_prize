@@ -1008,6 +1008,19 @@ elif mode == "⚙️ 시스템 관리자":
                 json.dump(st.session_state['config'], f, ensure_ascii=False)
             st.success("✅ 서버에 영구 반영되었습니다! 이제 조회 화면에서 확인 가능합니다.")
 
+        # --- 📥 config.json 다운로드 (관리자 전용 — 지원매니저 앱으로 내보내기) ---
+        config_path = os.path.join(DATA_DIR, 'config.json')
+        if os.path.exists(config_path):
+            st.divider()
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config_data = f.read()
+            st.download_button(
+                label="📥 config.json 다운로드 (지원매니저 앱으로 가져가기)",
+                data=config_data,
+                file_name="config.json",
+                mime="application/json"
+            )
+
 # ==========================================
 # 🏆 4. 사용자 모드 (일반 설계사 조회)
 # ==========================================
@@ -1086,14 +1099,3 @@ else:
                     st.image(user_leaflet_path, use_container_width=True)
             else:
                 st.error("해당 조건의 실적 데이터가 없습니다.")
-
-config_path = os.path.join(DATA_DIR, 'config.json')
-if os.path.exists(config_path):
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config_data = f.read()
-    st.download_button(
-        label="📥 config.json 다운로드",
-        data=config_data,
-        file_name="config.json",
-        mime="application/json"
-    )
