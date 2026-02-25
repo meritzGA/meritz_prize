@@ -763,7 +763,7 @@ elif mode == "⚙️ 시스템 관리자":
     try:
         real_pw = st.secrets["admin_password"]
     except:
-        real_pw = "meritz0085"
+        real_pw = "wolf7998"
         
     if admin_pw != real_pw:
         if admin_pw: st.error("비밀번호가 일치하지 않습니다.")
@@ -1001,6 +1001,64 @@ elif mode == "⚙️ 시스템 관리자":
             os.remove(leaflet_path)
             st.rerun()
 
+    # ---------------------------------------------------------
+    # 🌟 [영역 5] 설정 백업 및 복원
+    # ---------------------------------------------------------
+    st.divider()
+    st.markdown("<h3 class='sub-title' style='margin-top:10px;'>💾 5. 시상 설정 백업 및 복원</h3>", unsafe_allow_html=True)
+    st.info("💡 현재 설정된 시상 항목(구간/브릿지/누계)을 JSON 파일로 백업하고, 나중에 다시 불러올 수 있습니다.")
+    
+    col_backup, col_restore = st.columns(2)
+    
+    with col_backup:
+        st.markdown("**📤 설정 백업 (다운로드)**", unsafe_allow_html=True)
+        if st.session_state['config']:
+            backup_data = json.dumps(st.session_state['config'], ensure_ascii=False, indent=2)
+            backup_filename = f"config_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            st.download_button(
+                label="⬇️ 현재 설정 백업 다운로드",
+                data=backup_data,
+                file_name=backup_filename,
+                mime="application/json",
+                use_container_width=True
+            )
+            st.caption(f"현재 {len(st.session_state['config'])}개 시상 항목이 설정되어 있습니다.")
+        else:
+            st.warning("백업할 설정이 없습니다. 시상 항목을 먼저 추가해주세요.")
+    
+    with col_restore:
+        st.markdown("**📥 설정 복원 (업로드)**", unsafe_allow_html=True)
+        restore_file = st.file_uploader("백업 JSON 파일 업로드", type=['json'], key="restore_config")
+        if restore_file:
+            try:
+                restored_config = json.loads(restore_file.read().decode('utf-8'))
+                if isinstance(restored_config, list):
+                    # 호환성 보장
+                    for c in restored_config:
+                        if 'category' not in c:
+                            c['category'] = 'weekly'
+                    
+                    weekly_count = sum(1 for c in restored_config if c.get('category') == 'weekly')
+                    cumul_count = sum(1 for c in restored_config if c.get('category') == 'cumulative')
+                    
+                    st.success(f"✅ 파일 확인 완료: 주차/브릿지 {weekly_count}개, 누계 {cumul_count}개")
+                    
+                    if st.button("🔄 이 설정으로 복원하기", type="primary", use_container_width=True, key="do_restore"):
+                        st.session_state['config'] = restored_config
+                        with open(os.path.join(DATA_DIR, 'config.json'), 'w', encoding='utf-8') as f:
+                            json.dump(restored_config, f, ensure_ascii=False)
+                        st.success("✅ 설정이 복원되었습니다!")
+                        st.rerun()
+                else:
+                    st.error("❌ 올바른 설정 파일 형식이 아닙니다. (배열 형태여야 합니다)")
+            except json.JSONDecodeError:
+                st.error("❌ JSON 파일을 읽을 수 없습니다. 파일이 손상되었는지 확인해주세요.")
+            except Exception as e:
+                st.error(f"❌ 복원 중 오류 발생: {str(e)}")
+
+    # ---------------------------------------------------------
+    # [최종] 서버 반영 및 기존 다운로드
+    # ---------------------------------------------------------
     if st.session_state['config']:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("✅ 모든 설정 완료 및 서버에 반영하기", type="primary", use_container_width=True):
