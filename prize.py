@@ -1086,3 +1086,14 @@ else:
                     st.image(user_leaflet_path, use_container_width=True)
             else:
                 st.error("해당 조건의 실적 데이터가 없습니다.")
+
+config_path = os.path.join(DATA_DIR, 'config.json')
+if os.path.exists(config_path):
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config_data = f.read()
+    st.download_button(
+        label="📥 config.json 다운로드",
+        data=config_data,
+        file_name="config.json",
+        mime="application/json"
+    )
