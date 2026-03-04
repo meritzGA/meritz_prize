@@ -14,6 +14,17 @@ if not os.path.exists(DATA_DIR): os.makedirs(DATA_DIR)
 
 LOG_FILE = os.path.join(DATA_DIR, "access_log.csv")
 
+# ==========================================
+# 🔧 numpy 타입 JSON 직렬화 지원
+# ==========================================
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (np.integer,)): return int(obj)
+        if isinstance(obj, (np.floating,)): return float(obj)
+        if isinstance(obj, np.ndarray): return obj.tolist()
+        if isinstance(obj, (np.bool_,)): return bool(obj)
+        return super().default(obj)
+
 import re as _re
 def _clean_excel_text(s):
     if not s or not isinstance(s, str): return s
@@ -608,7 +619,7 @@ elif mode == "⚙️ 시스템 관리자":
     with cd:
         if st.button("🗑️ 모든 시상 삭제", use_container_width=True):
             st.session_state['config']=[c for c in st.session_state['config'] if c.get('category')!='weekly']
-            with open(os.path.join(DATA_DIR,'config.json'),'w',encoding='utf-8') as f: json.dump(st.session_state['config'],f,ensure_ascii=False)
+            with open(os.path.join(DATA_DIR,'config.json'),'w',encoding='utf-8') as f: json.dump(st.session_state['config'],f,ensure_ascii=False,cls=NumpyEncoder)
             st.rerun()
 
     weekly_cfgs=[(i,c) for i,c in enumerate(st.session_state['config']) if c.get('category','weekly')=='weekly']
@@ -626,7 +637,7 @@ elif mode == "⚙️ 시스템 관리자":
         tidx=0
         if "1기간" in cfg['type']: tidx=1
         elif "2기간" in cfg['type']: tidx=2
-        cfg['type']=st.radio("시책 종류",["구간 시책","브릿지 시책 (1기간: 시상 확정)","브릿지 시책 (2기간: 차월 달성 조건)"],index=tidx,horizontal=True,key=f"type_{i}")
+        cfg['type']=st.radio("시책 종류",["구간 시책","브릿지 시책 (1기간: 시상 확정)","브릿지 시책 (2기간: 당월 달성 조건)"],index=tidx,horizontal=True,key=f"type_{i}")
         
         cfg['file']=st.selectbox("📂 기본 파일 (인적사항+실적)",file_opts,index=_get_idx(cfg.get('file',''),file_opts) if file_opts else 0,key=f"file_{i}")
         cols=_get_cols_for_file(cfg['file'])
@@ -797,7 +808,7 @@ elif mode == "⚙️ 시스템 관리자":
     cb,cr=st.columns(2)
     with cb:
         if st.session_state['config']:
-            st.download_button("⬇️ 설정 백업",data=json.dumps(st.session_state['config'],ensure_ascii=False,indent=2),
+            st.download_button("⬇️ 설정 백업",data=json.dumps(st.session_state['config'],ensure_ascii=False,indent=2,cls=NumpyEncoder),
                 file_name=f"config_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",mime="application/json",use_container_width=True)
         else: st.warning("백업할 설정 없음")
     with cr:
@@ -811,7 +822,7 @@ elif mode == "⚙️ 시스템 관리자":
                     st.success(f"✅ 확인: 주차 {sum(1 for c in rd if c.get('category')=='weekly')}개, 누계 {sum(1 for c in rd if c.get('category')=='cumulative')}개")
                     if st.button("🔄 복원하기",type="primary",use_container_width=True,key="do_restore"):
                         st.session_state['config']=rd
-                        with open(os.path.join(DATA_DIR,'config.json'),'w',encoding='utf-8') as f: json.dump(rd,f,ensure_ascii=False)
+                        with open(os.path.join(DATA_DIR,'config.json'),'w',encoding='utf-8') as f: json.dump(rd,f,ensure_ascii=False,cls=NumpyEncoder)
                         st.session_state['merged_data']=build_merged_data(rd,st.session_state['raw_data'])
                         save_merged_to_disk(st.session_state['merged_data'])
                         st.success("✅ 복원 완료!"); st.rerun()
@@ -821,7 +832,7 @@ elif mode == "⚙️ 시스템 관리자":
     if st.session_state['config']:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("✅ 모든 설정 완료 및 서버에 반영하기",type="primary",use_container_width=True):
-            with open(os.path.join(DATA_DIR,'config.json'),'w',encoding='utf-8') as f: json.dump(st.session_state['config'],f,ensure_ascii=False)
+            with open(os.path.join(DATA_DIR,'config.json'),'w',encoding='utf-8') as f: json.dump(st.session_state['config'],f,ensure_ascii=False,cls=NumpyEncoder)
             st.session_state['merged_data']=build_merged_data(st.session_state['config'],st.session_state['raw_data'])
             save_merged_to_disk(st.session_state['merged_data'])
             ext_cnt=sum(1 for cfg in st.session_state['config'] for pi in cfg.get('prize_items',[]) if pi.get('file') and pi['file']!=cfg.get('file',''))
