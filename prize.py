@@ -698,33 +698,11 @@ def page_contact():
             achieved=achieved, msg_default=msg_default
         ))
 
-    # ③ 모바일: 합계 시상금 큰 순 / 데스크탑: 원본 순서 유지
-    is_mobile = st.session_state.get('contact_view', 'desktop') == 'mobile'
-
-    # 뷰 모드 JS 감지 + 토글 버튼
-    components.html("""<script>
-    (function(){
-        try {
-            var w = window.parent.innerWidth || window.innerWidth;
-            var sp = new URLSearchParams(window.parent.location.search);
-            if (!sp.has('cv_set')) {
-                sp.set('cv_set','1');
-                sp.set('cv', w<=768 ? 'mobile' : 'desktop');
-                window.parent.history.replaceState({},'',window.parent.location.pathname+'?'+sp.toString());
-                window.parent.location.reload();
-            }
-        } catch(e){}
-    })();
-    </script>""", height=0)
-    qp = st.query_params
-    if qp.get('cv') == 'mobile'  and st.session_state.get('contact_view') != 'mobile':
-        st.session_state['contact_view'] = 'mobile';  st.rerun()
-    if qp.get('cv') == 'desktop' and st.session_state.get('contact_view') != 'desktop':
-        st.session_state['contact_view'] = 'desktop'; st.rerun()
-    is_mobile = st.session_state.get('contact_view','desktop') == 'mobile'
 
     # 합계 시상금 큰 순 (데스크탑/모바일 공통)
     rows.sort(key=lambda r: r['tp'], reverse=True)
+
+    is_mobile = st.session_state.get('contact_view', 'desktop') == 'mobile'
 
     mgr_label = f"{mgr_name} 매니저" if mgr_name else f"코드 {mgr_code}"
     hdr_c, tog_c = st.columns([9, 1])
@@ -738,7 +716,6 @@ def page_contact():
         if st.button(cur_icon, key="cv_tog"):
             nxt = 'desktop' if is_mobile else 'mobile'
             st.session_state['contact_view'] = nxt
-            st.query_params['cv'] = nxt
             st.rerun()
 
     if is_mobile:
