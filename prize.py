@@ -89,7 +89,7 @@ def _get_cols_for_file(file_name):
     return []
 
 # ==========================================
-# 🔗 사전 병합(Pre-Merge): prize_items별 외부 파일 컬럼을 기본 파일에 병합
+# 🔗 사전 병합(Pre-Merge)
 # ==========================================
 def build_merged_data(config_list, raw_data):
     merged = {}
@@ -97,14 +97,11 @@ def build_merged_data(config_list, raw_data):
         base_file = cfg.get('file', '')
         df_base = raw_data.get(base_file)
         if df_base is None: continue
-        
         result = df_base.copy()
         col_code = cfg.get('col_code', '')
         if not col_code or col_code not in result.columns:
             merged[idx] = result; continue
-        
-        # prize_items 중 다른 파일을 참조하는 항목들을 파일별로 그룹핑
-        ext_files = {}  # { file_name: { col_code_ext, cols_needed[] } }
+        ext_files = {}
         for pi in cfg.get('prize_items', []):
             pi_file = pi.get('file', '') or ''
             if not pi_file or pi_file == base_file: continue
@@ -114,7 +111,6 @@ def build_merged_data(config_list, raw_data):
             col_e = pi.get('col_eligible', '')
             if col_p: ext_files[pi_file]['cols'].add(col_p)
             if col_e: ext_files[pi_file]['cols'].add(col_e)
-        
         if ext_files:
             result['_merge_key'] = result[col_code].apply(safe_str)
             for ext_fname, ext_info in ext_files.items():
@@ -126,7 +122,6 @@ def build_merged_data(config_list, raw_data):
                 if not available: continue
                 df_e = df_ext.copy()
                 df_e['_merge_key'] = df_e[col_code_ext].apply(safe_str)
-                # 충돌 방지: 기존 컬럼 제거 후 병합
                 for c in available:
                     if c in result.columns: result.drop(columns=[c], inplace=True, errors='ignore')
                 keep = ['_merge_key'] + available
@@ -240,6 +235,16 @@ st.markdown("""
     div[data-testid="stSelectbox"] * { font-size:1.1rem !important; }
     div.stButton > button[kind="primary"] { font-size:1.4rem !important; font-weight:800 !important; height:60px !important; border-radius:12px !important; background-color:rgb(128,0,0) !important; color:white !important; border:none !important; width:100%; margin-top:10px; margin-bottom:20px; box-shadow:0 4px 15px rgba(128,0,0,0.2) !important; }
     div.stButton > button[kind="secondary"] { font-size:1.2rem !important; font-weight:700 !important; min-height:60px !important; height:auto !important; padding:10px !important; border-radius:12px !important; background-color:#e8eaed !important; color:#191f28 !important; border:1px solid #d1d6db !important; width:100%; margin-top:5px; margin-bottom:5px; white-space:normal !important; }
+    /* 오늘 접촉 대상 카드 */
+    .contact-card { background:#ffffff; border-radius:20px; padding:22px 20px; margin-bottom:12px; border:1px solid #e5e8eb; box-shadow:0 4px 15px rgba(0,0,0,0.04); }
+    .contact-name { font-size:1.3rem; font-weight:800; color:#191f28; }
+    .contact-org { font-size:1.05rem; color:#8b95a1; margin-bottom:10px; }
+    .contact-prize-total { font-size:1.6rem; font-weight:800; color:rgb(128,0,0); text-align:right; }
+    .contact-shortfall { color:#d9232e; font-size:1.05rem; font-weight:700; }
+    .kakao-btn { display:block; width:100%; padding:14px; background:#FEE500; color:#3C1E1E; border:none; border-radius:12px; font-size:1.2rem; font-weight:800; cursor:pointer; text-align:center; margin-top:10px; box-shadow:0 3px 8px rgba(0,0,0,0.08); }
+    .kakao-btn:active { transform:scale(0.98); }
+    .copy-btn { display:block; width:100%; padding:14px; background:#FEE500; color:#3C1E1E; border:none; border-radius:12px; font-size:1.2rem; font-weight:800; cursor:pointer; text-align:center; margin-top:10px; box-shadow:0 3px 8px rgba(0,0,0,0.08); }
+    .msg-preview { background:#f9fafb; border:1px solid #e5e8eb; border-radius:12px; padding:14px; font-size:1.0rem; color:#333; white-space:pre-wrap; line-height:1.6; margin-top:8px; word-break:keep-all; }
     @media (prefers-color-scheme: dark) {
         [data-testid="stAppViewContainer"] { background-color:#121212 !important; color:#e0e0e0 !important; }
         label, p, .stMarkdown p { color:#e0e0e0 !important; }
@@ -249,24 +254,26 @@ st.markdown("""
         .config-box { background-color:#1a1a1a !important; border-color:#333 !important; }
         .config-box-blue { background-color:#121928 !important; border-color:#2a5298 !important; }
         .detail-box { background-color:#121212 !important; border-color:#333 !important; }
-        .toss-card { background-color:#1e1e1e !important; border-color:#333 !important; }
-        .toss-title { color:#ffffff !important; } .toss-desc { color:#ff6b6b !important; }
-        .data-label { color:#a0aab5 !important; } .data-value { color:#ffffff !important; }
-        .prize-label { color:#ffffff !important; } .prize-value { color:#ff4b4b !important; }
+        .toss-card, .contact-card { background-color:#1e1e1e !important; border-color:#333 !important; }
+        .toss-title,.contact-name { color:#ffffff !important; } .toss-desc { color:#ff6b6b !important; }
+        .data-label,.contact-org { color:#a0aab5 !important; } .data-value { color:#ffffff !important; }
+        .prize-label { color:#ffffff !important; } .prize-value,.contact-prize-total { color:#ff4b4b !important; }
         .toss-divider { background-color:#333 !important; }
         .shortfall-row { background-color:#2a1215 !important; border-color:#ff4b4b !important; }
-        .shortfall-text { color:#ff6b6b !important; }
+        .shortfall-text,.contact-shortfall { color:#ff6b6b !important; }
         .cumul-stack-box { background-color:#1e1e1e !important; border-color:#333 !important; border-left-color:#4da3ff !important; }
         .cumul-stack-title { color:#4da3ff !important; } .cumul-stack-val { color:#a0aab5 !important; }
         .cumul-stack-prize { color:#ff4b4b !important; }
         div[data-testid="stTextInput"] input { background-color:#1e1e1e !important; color:#ffffff !important; border-color:#444 !important; }
         div[data-testid="stSelectbox"] > div { background-color:#1e1e1e !important; color:#ffffff !important; border-color:#444 !important; }
         div.stButton > button[kind="secondary"] { background-color:#2d2d2d !important; color:#ffffff !important; border-color:#444 !important; }
+        .msg-preview { background-color:#1a1a1a !important; border-color:#333 !important; color:#e0e0e0 !important; }
     }
     @media (max-width: 450px) {
         .summary-total { font-size:2.1rem !important; } .prize-value { font-size:1.45rem !important; }
         .toss-title { font-size:1.4rem !important; } .shortfall-text { font-size:1.05rem !important; }
         .cumul-stack-title { font-size:1.15rem; } .cumul-stack-prize { font-size:1.4rem; }
+        .contact-prize-total { font-size:1.35rem !important; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -285,10 +292,8 @@ def _read_prize_items(cfg, match_df):
             col_elig = item.get('col_eligible', '')
             if col_elig and col_elig in match_df.columns:
                 raw_elig = match_df[col_elig].values[0]
-                # 공란/NaN → 무조건 대상, 명시적 0 → 미대상(건너뜀)
                 if pd.notna(raw_elig) and str(raw_elig).strip() != '':
-                    if safe_float(raw_elig) == 0:
-                        continue
+                    if safe_float(raw_elig) == 0: continue
             amt = safe_float(match_df[col_prize].values[0])
             prize_details.append({"label": label or col_prize, "amount": amt})
     else:
@@ -322,14 +327,13 @@ def calculate_agent_performance(target_code):
                 vc = safe_float(match_df[cfg['col_val_curr']].values[0]) if cfg.get('col_val_curr') and cfg['col_val_curr'] in df.columns else 0
                 curr_req = float(cfg.get('curr_req', 100000.0))
                 calc_rate=0; tier_achieved=0; prize=0
-                # 전월 실적 기준으로 구간/지급률 결정
                 for amt, rate in cfg.get('tiers', []):
                     if vp >= amt: tier_achieved=amt; calc_rate=rate; break
                 if tier_achieved > 0: prize = (tier_achieved + curr_req) * (calc_rate / 100)
                 next_tier = None
                 for amt, rate in reversed(cfg.get('tiers', [])):
                     if vp < amt: next_tier = amt; break
-                curr_met = vc >= curr_req  # 당월 가동 달성 여부
+                curr_met = vc >= curr_req
                 calculated_results.append({"name":cfg['name'],"desc":cfg.get('desc',''),"category":"weekly","type":"브릿지2","val_prev":vp,"val_curr":vc,"tier":tier_achieved,"rate":calc_rate,"prize":prize,"curr_req":curr_req,"next_tier":next_tier,"shortfall":next_tier - vp if next_tier else 0,"curr_met":curr_met})
             else:
                 if not prize_details: continue
@@ -380,7 +384,6 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 share_text += f"\n[{res['name']}]\n- 전월실적: {res['val_prev']:,.0f}원\n- 당월실적: {res['val_curr']:,.0f}원\n- 예상시상: {res['prize']:,.0f}원 (다음 달 {int(res['curr_req']//10000)}만 가동 조건)\n"
                 for d in details: share_text += f"  · {d['label']}: {d['amount']:,.0f}원\n"
             elif res['type'] == "브릿지2":
-                # 당월 가동 달성 여부 표시
                 curr_req_val = int(res['curr_req']//10000)
                 if res.get('curr_met'):
                     curr_status = f"<div class='data-row'><span class='data-label'>이번 달 {curr_req_val}만 가동</span><span class='data-value' style='color:#2e7d32;font-weight:800;'>✅ 달성</span></div>"
@@ -415,15 +418,513 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
         st.markdown("<h4 class='main-title' style='margin-top:10px;'>💬 카카오톡 바로 공유하기</h4>", unsafe_allow_html=True)
         copy_btn_component(share_text)
 
+
 # ==========================================
-# 📱 메뉴
+# 📞 오늘 접촉 대상 - 카카오 전송 컴포넌트
 # ==========================================
-mode = st.radio("화면 선택", ["📊 내 실적 조회", "👥 매니저 관리", "⚙️ 시스템 관리자"], horizontal=True, label_visibility="collapsed")
+def render_kakao_send_btn(msg_key, agent_name, btn_key, height=80):
+    """
+    버튼 클릭 시 parent DOM의 textarea 현재값을 직접 읽어 전송.
+    msg_key를 aria-label 검색용 식별자로 사용.
+    """
+    html = f"""
+    <div id="kw_{btn_key}" style="margin-top:6px;">
+      <button id="kb_{btn_key}" onclick="doSend_{btn_key}()"
+        style="width:100%;padding:13px 8px;background:#FEE500;color:#3C1E1E;border:none;
+               border-radius:12px;font-size:1.05rem;font-weight:800;cursor:pointer;
+               box-shadow:0 3px 8px rgba(0,0,0,0.1);">
+        💬 {agent_name} 팀장님께 카카오톡 보내기
+      </button>
+      <div id="kd_{btn_key}" style="display:none;text-align:center;padding:8px 0;
+           font-weight:700;color:#2e7d32;font-size:0.95rem;"></div>
+    </div>
+    <script>
+    function doSend_{btn_key}() {{
+        // 클릭 시점에 parent DOM의 textarea 현재값을 읽음
+        var text = '';
+        try {{
+            var labelKey = '{msg_key}';
+            var parentDoc = window.parent.document;
+            // Streamlit textarea: [data-testid="stTextArea"] 컨테이너 안에
+            // label의 텍스트 내용이 key와 일치하는 textarea를 찾음
+            var containers = parentDoc.querySelectorAll('[data-testid="stTextArea"]');
+            for (var i = 0; i < containers.length; i++) {{
+                var label = containers[i].querySelector('label');
+                var ta    = containers[i].querySelector('textarea');
+                if (ta && label && label.textContent.trim() === labelKey) {{
+                    text = ta.value; break;
+                }}
+            }}
+            // 못 찾으면 aria-label 또는 id로 fallback
+            if (!text) {{
+                var ta2 = parentDoc.querySelector('textarea[aria-label="' + labelKey + '"]') ||
+                          parentDoc.querySelector('textarea[id*="' + labelKey + '"]');
+                if (ta2) text = ta2.value;
+            }}
+        }} catch(e) {{}}
+        var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+        function showDone(msg) {{
+            document.getElementById('kb_{btn_key}').style.display = 'none';
+            var d = document.getElementById('kd_{btn_key}');
+            d.style.display = 'block';
+            d.innerHTML = msg;
+        }}
+
+        function copyToClipboard(cb) {{
+            if (navigator.clipboard && window.isSecureContext) {{
+                navigator.clipboard.writeText(text).then(cb).catch(function() {{
+                    legacyCopy(); cb();
+                }});
+            }} else {{ legacyCopy(); cb(); }}
+        }}
+
+        function legacyCopy() {{
+            var ta = document.createElement('textarea');
+            ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta);
+        }}
+
+        if (isMobile) {{
+            // 모바일: Web Share API → 카카오 대상자 선택 화면
+            if (navigator.share) {{
+                navigator.share({{ text: text }})
+                    .then(function() {{ showDone('✅ 공유 완료!'); }})
+                    .catch(function(e) {{
+                        // 취소하거나 실패 시 copy+launch fallback
+                        copyToClipboard(function() {{
+                            showDone('✅ 복사 완료! 카카오톡에서 붙여넣기 하세요.');
+                            setTimeout(function() {{ window.location.href='kakaotalk://launch'; }}, 400);
+                        }});
+                    }});
+            }} else {{
+                // Web Share 미지원 → copy + kakaotalk://launch
+                copyToClipboard(function() {{
+                    showDone('✅ 복사! 카카오톡 실행 중...');
+                    setTimeout(function() {{ window.location.href='kakaotalk://launch'; }}, 400);
+                }});
+            }}
+        }} else {{
+            // 데스크탑: 복사 후 2.5초 뒤 버튼 원복
+            copyToClipboard(function() {{
+                showDone('✅ 복사 완료! 카카오톡 채팅창에 Ctrl+V 하세요.');
+                setTimeout(function() {{
+                    document.getElementById('kd_{btn_key}').style.display = 'none';
+                    document.getElementById('kb_{btn_key}').style.display = 'block';
+                }}, 2500);
+            }});
+        }}
+    }}
+    </script>
+    """
+    components.html(html, height=height)
+
+
+# ==========================================
+# 📞 오늘 접촉 대상 페이지
+# ==========================================
+def page_contact():
+    st.markdown('<div class="title-band">📞 오늘 접촉 대상</div>', unsafe_allow_html=True)
+
+    BRIDGE_COLS = [
+        '브릿지대상_2_3월', '브릿지실적구간_2월', '연속가동대상_2_3월',
+        '브릿지실적_2월', '연속가동실적_2월', '연속가동실적구간_2월',
+        '브릿지실적_3월', '브릿지부족금액_3월'
+    ]
+
+    # ── 브릿지 파일 탐색 ─────────────────────────────────────
+    bridge_df     = None
+    mgr_code_col  = None
+    agent_name_col= None
+    agency_col    = None
+    mgr_name_col  = None
+
+    for cfg in st.session_state.get('config', []):
+        if not mgr_code_col:   mgr_code_col   = cfg.get('col_manager_code','') or cfg.get('col_manager','')
+        if not agent_name_col: agent_name_col = cfg.get('col_name','')
+        if not agency_col:     agency_col     = cfg.get('col_agency','') or cfg.get('col_branch','')
+
+    best_score = 0
+    for fname, df in st.session_state['raw_data'].items():
+        score = sum(1 for c in BRIDGE_COLS if c in df.columns)
+        if score > best_score:
+            best_score = score
+            bridge_df  = df
+            for col in df.columns:
+                if not mgr_code_col   and any(k in col for k in ('매니저코드','지원매니저코드','매니저_코드')): mgr_code_col   = col
+                if not mgr_name_col   and any(k in col for k in ('매니저명','지원매니저명','담당매니저명')):     mgr_name_col   = col
+                if not agent_name_col and any(k in col for k in ('성명','이름','설계사명')):                    agent_name_col = col
+                if not agency_col     and any(k in col for k in ('대리점명','소속','지사명')):                  agency_col     = col
+
+    if bridge_df is None or best_score == 0:
+        st.warning("⚠️ 브릿지 데이터 파일을 찾을 수 없습니다. 관리자 화면에서 업로드해주세요.")
+        st.info(f"필요 컬럼: {', '.join(BRIDGE_COLS)}")
+        return
+
+    missing_cols = [c for c in BRIDGE_COLS if c not in bridge_df.columns]
+    if missing_cols:
+        st.warning(f"⚠️ 일부 컬럼 없음: {', '.join(missing_cols)}")
+
+    # ── 로그인 ────────────────────────────────────────────────
+    if 'contact_logged_in' not in st.session_state:
+        st.session_state.contact_logged_in = False
+
+    if not st.session_state.contact_logged_in:
+        st.markdown("<h3 class='main-title'>지원매니저 코드를 입력하세요</h3>", unsafe_allow_html=True)
+        mgr_input = st.text_input("매니저 코드", type="password", placeholder="예: 12345", label_visibility="collapsed")
+        if st.button("접촉 대상 조회하기", type="primary"):
+            if not mgr_input:
+                st.warning("코드를 입력해주세요.")
+            else:
+                sic   = safe_str(mgr_input)
+                found = False
+                if mgr_code_col and mgr_code_col in bridge_df.columns:
+                    if sic in get_clean_series(bridge_df, mgr_code_col).unique(): found = True
+                if not found:
+                    for ci, cfg in enumerate(st.session_state.get('config', [])):
+                        mc = cfg.get('col_manager_code','') or cfg.get('col_manager','')
+                        if mc:
+                            df = _get_merged_df(ci)
+                            if df is not None and mc in df.columns:
+                                if sic in get_clean_series(df, mc).unique():
+                                    found = True; mgr_code_col = mc; break
+                if found:
+                    st.session_state.contact_logged_in  = True
+                    st.session_state.contact_mgr_code   = sic
+                    # 메시지 캐시 초기화
+                    for k in list(st.session_state.keys()):
+                        if k.startswith('cmsg_'): del st.session_state[k]
+                    st.rerun()
+                else:
+                    st.error(f"❌ 코드 '{mgr_input}'가 데이터에 없습니다.")
+        return
+
+    # ── 로그인 성공 ──────────────────────────────────────────
+    mgr_code = st.session_state.contact_mgr_code
+    col_lo, _ = st.columns([2, 8])
+    with col_lo:
+        if st.button("🚪 로그아웃"):
+            st.session_state.contact_logged_in = False
+            st.rerun()
+
+    # 매니저 이름
+    mgr_name = ""
+    if mgr_name_col and mgr_name_col in bridge_df.columns and mgr_code_col and mgr_code_col in bridge_df.columns:
+        mdf = bridge_df[get_clean_series(bridge_df, mgr_code_col) == mgr_code]
+        if not mdf.empty: mgr_name = _clean_excel_text(safe_str(mdf[mgr_name_col].values[0]))
+    if not mgr_name:
+        for ci, cfg in enumerate(st.session_state.get('config', [])):
+            mc = cfg.get('col_manager_code','') or cfg.get('col_manager','')
+            mn = cfg.get('col_manager_name','')
+            if mc and mn:
+                df = _get_merged_df(ci)
+                if df is not None and mc in df.columns and mn in df.columns:
+                    mdf = df[get_clean_series(df, mc) == mgr_code]
+                    if not mdf.empty: mgr_name = _clean_excel_text(safe_str(mdf[mn].values[0])); break
+
+    display_mgr = mgr_name if mgr_name else mgr_code
+
+    # ── 데이터 필터 & 계산 ──────────────────────────────────
+    if not (mgr_code_col and mgr_code_col in bridge_df.columns):
+        st.error("⚠️ 매니저 코드 컬럼을 찾을 수 없습니다.")
+        return
+
+    raw_df = bridge_df[get_clean_series(bridge_df, mgr_code_col) == mgr_code].copy().reset_index(drop=True)
+    if raw_df.empty:
+        st.info("해당 매니저의 접촉 대상이 없습니다.")
+        return
+
+    # ① 필터: 브릿지실적_2월 >= 100,000
+    if '브릿지실적_2월' in raw_df.columns:
+        raw_df = raw_df[raw_df['브릿지실적_2월'].apply(safe_float) >= 100000].reset_index(drop=True)
+
+    if raw_df.empty:
+        st.info("브릿지실적_2월 10만원 이상인 접촉 대상이 없습니다.")
+        return
+
+    # 전체 계산 → rows 리스트
+    rows = []
+    for i, row in raw_df.iterrows():
+        def gv(col, r=row):
+            return safe_float(r.get(col, 0))
+
+        aname  = _clean_excel_text(safe_str(row[agent_name_col])) if agent_name_col and agent_name_col in row.index else f"설계사{i+1}"
+        agency = _clean_excel_text(safe_str(row[agency_col]))     if agency_col     and agency_col     in row.index else ""
+
+        br2  = gv('브릿지실적_2월')
+        brat = gv('브릿지대상_2_3월')
+        btir = gv('브릿지실적구간_2월')
+        cr2  = gv('연속가동실적_2월')
+        crat = gv('연속가동대상_2_3월')
+        ctir = gv('연속가동실적구간_2월')
+        br3  = gv('브릿지실적_3월')
+        bsf  = gv('브릿지부족금액_3월')
+
+        bp = (brat / 100) * (btir + 100000)
+        cp = (crat / 100) * (ctir + 100000)
+        tp = bp + cp
+
+        # ④ 메시지 템플릿 (★ 강조) — 브릿지실적_3월 >= 10만 이면 달성 메시지
+        achieved = (br3 >= 100000)
+        if achieved:
+            msg_default = f"달성!"
+        else:
+            msg_default = (
+                f"★{aname} 팀장님!★  안녕하세요. {display_mgr} 매니저입니다.\n"
+                f"팀장님 지난 2월 브릿지 실적 ★{br2:,.0f}원★ 하셔서 \n"
+                f"이번 주 10만원만 하시면 \n"
+                f"★{bp:,.0f}원★의 브릿지 시상금을 받으실 수 있고\n"
+                f"연속가동 실적 ★{cr2:,.0f}원★ 하셔서 \n"
+                f"동일하게 10만원만 하시면 \n"
+                f"★{cp:,.0f}원★을 받으실 수 있으십니다.\n\n"
+                f"그런데 현재 ★{br3:,.0f}원★ 이셔서 \n"
+                f"★{bsf:,.0f}원★이 부족하세요. T_T\n"
+                f"오늘까지 꼭 10만원만 하시면 \n"
+                f"합산 ★{tp:,.0f}원★ 을 받으실 수 있는 \n"
+                f"엄청난 상황이라 꼭 챙겨 드리려고 연락드렸습니다.\n\n"
+                f"오늘 10만원 하실 수 있는 플랜은 \n"
+                f"1. 가장 체결률 좋은 진단및치료비 + 비통치, 항암 26종 플랜\n"
+                f"2. 지난 달보다 진단비 가격이 10%나 하락한 5.10.5\n"
+                f"3. 새로나온 표적항암 2억에 1만원도 안되는 1.2.3 또또암 플랜 등이 있습니다.\n\n"
+                f"지금 바로 연락주시면 설계 도와드릴께요!\n\n"
+                f"오늘도 좋은 하루 되시고 시상금 꼭 챙겨가세요!"
+            )
+        rows.append(dict(
+            idx=i, aname=aname, agency=agency,
+            br2=br2, brat=brat, btir=btir,
+            cr2=cr2, crat=crat, ctir=ctir,
+            br3=br3, bsf=bsf, bp=bp, cp=cp, tp=tp,
+            achieved=achieved, msg_default=msg_default
+        ))
+
+    # ③ 모바일: 합계 시상금 큰 순 / 데스크탑: 원본 순서 유지
+    is_mobile = st.session_state.get('contact_view', 'desktop') == 'mobile'
+
+    # 뷰 모드 JS 감지 + 토글 버튼
+    components.html("""<script>
+    (function(){
+        try {
+            var w = window.parent.innerWidth || window.innerWidth;
+            var sp = new URLSearchParams(window.parent.location.search);
+            if (!sp.has('cv_set')) {
+                sp.set('cv_set','1');
+                sp.set('cv', w<=768 ? 'mobile' : 'desktop');
+                window.parent.history.replaceState({},'',window.parent.location.pathname+'?'+sp.toString());
+                window.parent.location.reload();
+            }
+        } catch(e){}
+    })();
+    </script>""", height=0)
+    qp = st.query_params
+    if qp.get('cv') == 'mobile'  and st.session_state.get('contact_view') != 'mobile':
+        st.session_state['contact_view'] = 'mobile';  st.rerun()
+    if qp.get('cv') == 'desktop' and st.session_state.get('contact_view') != 'desktop':
+        st.session_state['contact_view'] = 'desktop'; st.rerun()
+    is_mobile = st.session_state.get('contact_view','desktop') == 'mobile'
+
+    # 합계 시상금 큰 순 (데스크탑/모바일 공통)
+    rows.sort(key=lambda r: r['tp'], reverse=True)
+
+    mgr_label = f"{mgr_name} 매니저" if mgr_name else f"코드 {mgr_code}"
+    hdr_c, tog_c = st.columns([9, 1])
+    with hdr_c:
+        st.markdown(
+            f"<h3 class='main-title' style='margin-bottom:4px;'>📋 {mgr_label}님 접촉 대상 — {len(rows)}명</h3>",
+            unsafe_allow_html=True
+        )
+    with tog_c:
+        cur_icon = "📱" if is_mobile else "🖥️"
+        if st.button(cur_icon, key="cv_tog"):
+            nxt = 'desktop' if is_mobile else 'mobile'
+            st.session_state['contact_view'] = nxt
+            st.query_params['cv'] = nxt
+            st.rerun()
+
+    if is_mobile:
+        st.caption("📱 합계 시상금 큰 순 · 버튼 클릭 시 카카오톡 공유 화면으로 이동")
+    else:
+        st.caption("🖥️ 합계 시상금 큰 순 · 메시지 직접 수정 후 복사")
+
+    # ── 메시지 세션 초기화 (처음 로드 시 default 삽입) ─────
+    for r in rows:
+        skey = f"cmsg_{r['idx']}"
+        if skey not in st.session_state:
+            st.session_state[skey] = r['msg_default']
+
+    # ══════════════════════════════════════════════════════
+    # 🖥️ 데스크탑 뷰: 1줄 = 정보 | 메시지 편집 | 버튼
+    # ══════════════════════════════════════════════════════
+    if not is_mobile:
+        # 헤더 행
+        st.markdown("""
+        <div style='display:grid;grid-template-columns:220px 1fr 160px;gap:10px;
+                    padding:8px 12px;background:#f0f2f5;border-radius:10px;
+                    font-weight:700;color:#8b95a1;font-size:0.9rem;margin-bottom:6px;'>
+            <div>대상자 / 소속</div>
+            <div>카카오톡 메시지 (직접 수정 가능)</div>
+            <div style='text-align:center;'>전송</div>
+        </div>""", unsafe_allow_html=True)
+
+        for r in rows:
+            skey = f"cmsg_{r['idx']}"
+            if r['achieved']:
+                sf_badge = "<span style='color:#2e7d32;font-size:0.85rem;font-weight:800;'>🏆 달성!</span>"
+                card_bg  = "#f0faf4"
+                border   = "2px solid #81c995"
+            else:
+                sf_badge = (f"<span style='color:#d9232e;font-size:0.85rem;font-weight:700;'>"
+                            f"⚠️ {r['bsf']:,.0f}원 부족</span>") if r['bsf'] > 0 else \
+                           "<span style='color:#2e7d32;font-size:0.85rem;font-weight:700;'>✅ 달성</span>"
+                card_bg  = "#fff"
+                border   = "1px solid #e5e8eb"
+
+            info_html = f"""
+            <div style='background:{card_bg};border:{border};border-radius:12px;
+                        padding:12px 14px;height:100%;'>
+                <div style='font-size:1.1rem;font-weight:800;color:#191f28;margin-bottom:4px;'>
+                    👤 {r['aname']}
+                </div>
+                <div style='font-size:0.9rem;color:#8b95a1;margin-bottom:8px;'>
+                    📍 {r['agency'] if r['agency'] else '—'}
+                </div>
+                <div style='background:#fff8f8;border-radius:8px;padding:6px 10px;margin-bottom:4px;'>
+                    <span style='font-size:0.8rem;color:#8b95a1;'>브릿지</span>
+                    <span style='font-size:1.05rem;font-weight:800;color:rgb(128,0,0);
+                                float:right;'>{r['bp']:,.0f}원</span>
+                </div>
+                <div style='background:#f8f8ff;border-radius:8px;padding:6px 10px;margin-bottom:6px;'>
+                    <span style='font-size:0.8rem;color:#8b95a1;'>연속가동</span>
+                    <span style='font-size:1.05rem;font-weight:800;color:#1e3c72;
+                                float:right;'>{r['cp']:,.0f}원</span>
+                </div>
+                <div style='display:flex;justify-content:space-between;align-items:center;'>
+                    <span style='font-size:1.15rem;font-weight:800;color:rgb(128,0,0);'>
+                        💰 {r['tp']:,.0f}원
+                    </span>
+                    {sf_badge}
+                </div>
+            </div>"""
+
+            col_info, col_msg, col_btn = st.columns([2, 5, 1], gap="small")
+            with col_info:
+                st.markdown(info_html, unsafe_allow_html=True)
+            with col_msg:
+                st.text_area(
+                    skey,                        # label = skey → JS 검색용
+                    value=st.session_state[skey],
+                    key=skey,
+                    height=210,
+                    label_visibility="hidden",   # DOM에 label 텍스트 유지, 화면엔 숨김
+                    disabled=r['achieved']
+                )
+            with col_btn:
+                if r['achieved']:
+                    st.markdown(
+                        "<div style='display:flex;align-items:center;justify-content:center;"
+                        "height:210px;font-size:1.5rem;font-weight:800;color:#2e7d32;"
+                        "text-align:center;'>🏆<br>달성!</div>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    render_kakao_send_btn(skey, r['aname'], f"d{r['idx']}", height=225)
+
+            st.markdown("<hr style='margin:6px 0 10px;opacity:0.1;'>", unsafe_allow_html=True)
+
+    # ══════════════════════════════════════════════════════
+    # 📱 모바일 뷰: 카드 → 메시지 편집 → 전송 버튼
+    # ══════════════════════════════════════════════════════
+    else:
+        for r in rows:
+            skey = f"cmsg_{r['idx']}"
+            if r['achieved']:
+                sf_badge  = "<span style='color:#2e7d32;font-weight:800;font-size:1.05rem;'>🏆 달성!</span>"
+                card_border = "border:2px solid #81c995;background:#f0faf4;"
+            else:
+                sf_badge  = (f"<span class='contact-shortfall'>⚠️ {r['bsf']:,.0f}원 부족</span>") \
+                             if r['bsf'] > 0 else \
+                             "<span style='color:#2e7d32;font-weight:700;'>✅ 달성 완료</span>"
+                card_border = ""
+
+            card_html = f"""
+            <div class='contact-card' style='{card_border}'>
+                <div style='display:flex;justify-content:space-between;
+                            align-items:flex-start;margin-bottom:8px;'>
+                    <div>
+                        <div class='contact-name'>👤 {r['aname']} 팀장님</div>
+                        <div class='contact-org'>📍 {r['agency'] if r['agency'] else '—'}</div>
+                    </div>
+                    <div class='contact-prize-total'>💰 {r['tp']:,.0f}원</div>
+                </div>
+                <div style='display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;'>
+                    <div style='flex:1;min-width:120px;background:#fff8f8;
+                                border-radius:10px;padding:8px 10px;'>
+                        <div style='font-size:0.85rem;color:#8b95a1;'>브릿지 시상</div>
+                        <div style='font-size:1.15rem;font-weight:800;
+                                    color:rgb(128,0,0);'>{r['bp']:,.0f}원</div>
+                        <div style='font-size:0.8rem;color:#aaa;'>2월 {r['br2']:,.0f}원</div>
+                    </div>
+                    <div style='flex:1;min-width:120px;background:#f8f8ff;
+                                border-radius:10px;padding:8px 10px;'>
+                        <div style='font-size:0.85rem;color:#8b95a1;'>연속가동 시상</div>
+                        <div style='font-size:1.15rem;font-weight:800;
+                                    color:#1e3c72;'>{r['cp']:,.0f}원</div>
+                        <div style='font-size:0.8rem;color:#aaa;'>2월 {r['cr2']:,.0f}원</div>
+                    </div>
+                </div>
+                <div style='display:flex;justify-content:space-between;
+                            align-items:center;padding:6px 0 2px;'>
+                    <span style='color:#8b95a1;font-size:0.9rem;'>
+                        3월 현재: {r['br3']:,.0f}원
+                    </span>
+                    {sf_badge}
+                </div>
+            </div>"""
+            st.markdown(card_html, unsafe_allow_html=True)
+
+            if r['achieved']:
+                # 달성자: 메시지 창(읽기 전용) + 카톡 버튼 없음
+                st.text_area(
+                    f"({r['aname']})",
+                    value=st.session_state[skey],
+                    key=skey,
+                    height=68,
+                    disabled=True,
+                    label_visibility="collapsed"
+                )
+            else:
+                # 미달성: 편집 가능 + 카톡 버튼
+                st.text_area(
+                    skey,           # label = skey → JS 검색용
+                    value=st.session_state[skey],
+                    key=skey,
+                    height=260,
+                    label_visibility="hidden"
+                )
+                render_kakao_send_btn(skey, r['aname'], f"m{r['idx']}", height=80)
+            st.markdown("<hr style='margin:12px 0;opacity:0.12;'>", unsafe_allow_html=True)
+
+
+# ==========================================
+# 📱 메뉴 (4개)
+# ==========================================
+mode = st.radio(
+    "화면 선택",
+    ["📊 내 실적 조회", "👥 매니저 관리", "📞 오늘 접촉 대상", "⚙️ 시스템 관리자"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
+
+# ==========================================
+# 📞 오늘 접촉 대상
+# ==========================================
+if mode == "📞 오늘 접촉 대상":
+    page_contact()
 
 # ==========================================
 # 👥 매니저 관리
 # ==========================================
-if mode == "👥 매니저 관리":
+elif mode == "👥 매니저 관리":
     st.markdown('<div class="title-band">매니저 소속 실적 관리</div>', unsafe_allow_html=True)
     if 'mgr_logged_in' not in st.session_state: st.session_state.mgr_logged_in = False
     if not st.session_state.mgr_logged_in:
@@ -554,7 +1055,7 @@ elif mode == "⚙️ 시스템 관리자":
 
     # --- [1] 파일 업로드 ---
     st.markdown("<h3 class='sub-title'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
-    st.info("💡 시상 항목이 여러 파일에 나뉘어 있으면 모두 업로드하세요. 각 시상금 항목에서 출처 파일을 개별 선택합니다.")
+    st.info("💡 시상 항목이 여러 파일에 나뉘어 있으면 모두 업로드하세요. 브릿지 파일도 여기서 업로드하세요.")
     uploaded_files = st.file_uploader("CSV/엑셀 파일 업로드", accept_multiple_files=True, type=['csv','xlsx'])
     if uploaded_files:
         nu = False
@@ -625,6 +1126,9 @@ elif mode == "⚙️ 시스템 관리자":
     weekly_cfgs=[(i,c) for i,c in enumerate(st.session_state['config']) if c.get('category','weekly')=='weekly']
     if not weekly_cfgs: st.info("현재 설정된 주차/브릿지 시상이 없습니다.")
 
+    def _get_idx(val, opts):
+        return opts.index(val) if val in opts else 0
+
     for i, cfg in weekly_cfgs:
         if 'desc' not in cfg: cfg['desc']=""
         st.markdown("<div class='config-box'>", unsafe_allow_html=True)
@@ -638,10 +1142,8 @@ elif mode == "⚙️ 시스템 관리자":
         if "1기간" in cfg['type']: tidx=1
         elif "2기간" in cfg['type']: tidx=2
         cfg['type']=st.radio("시책 종류",["구간 시책","브릿지 시책 (1기간: 시상 확정)","브릿지 시책 (2기간: 당월 달성 조건)"],index=tidx,horizontal=True,key=f"type_{i}")
-        
         cfg['file']=st.selectbox("📂 기본 파일 (인적사항+실적)",file_opts,index=_get_idx(cfg.get('file',''),file_opts) if file_opts else 0,key=f"file_{i}")
         cols=_get_cols_for_file(cfg['file'])
-        
         c1,c2=st.columns(2)
         with c1:
             st.info("💡 식별 컬럼 (기본 파일)")
@@ -675,7 +1177,6 @@ elif mode == "⚙️ 시스템 관리자":
                     cfg['tiers']=sorted(nt,key=lambda x:x[0],reverse=True)
                 except: st.error("형식 오류")
             else:
-                # 🌟 시상금 항목별 파일 선택
                 st.markdown("**💰 시상금 항목** <small style='color:#8b95a1;'>— 항목별로 다른 파일 선택 가능</small>", unsafe_allow_html=True)
                 if 'prize_items' not in cfg:
                     old_col=cfg.pop('col_prize','') or cfg.pop('col','')
