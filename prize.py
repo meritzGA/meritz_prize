@@ -733,16 +733,6 @@ def page_contact():
     # 🖥️ 데스크탑 뷰: 1줄 = 정보 | 메시지 편집 | 버튼
     # ══════════════════════════════════════════════════════
     if not is_mobile:
-        # 헤더 행
-        st.markdown("""
-        <div style='display:grid;grid-template-columns:220px 1fr 160px;gap:10px;
-                    padding:8px 12px;background:#f0f2f5;border-radius:10px;
-                    font-weight:700;color:#8b95a1;font-size:0.9rem;margin-bottom:6px;'>
-            <div>대상자 / 소속</div>
-            <div>카카오톡 메시지 (직접 수정 가능)</div>
-            <div style='text-align:center;'>전송</div>
-        </div>""", unsafe_allow_html=True)
-
         for r in rows:
             skey = f"cmsg_{r['idx']}"
             if r['achieved']:
@@ -783,16 +773,16 @@ def page_contact():
                 </div>
             </div>"""
 
-            col_info, col_msg, col_btn = st.columns([2, 5, 1], gap="small")
+            col_info, col_msg, col_btn = st.columns([2, 4, 2], gap="medium")
             with col_info:
                 st.markdown(info_html, unsafe_allow_html=True)
             with col_msg:
                 st.text_area(
-                    skey,                        # label = skey → JS 검색용
+                    skey,
                     value=st.session_state[skey],
                     key=skey,
                     height=210,
-                    label_visibility="hidden",   # DOM에 label 텍스트 유지, 화면엔 숨김
+                    label_visibility="hidden",
                     disabled=r['achieved']
                 )
             with col_btn:
