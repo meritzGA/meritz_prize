@@ -661,24 +661,24 @@ def page_contact():
         br3  = gv('브릿지실적_3월')
         bsf  = gv('브릿지부족금액_3월')
 
-        # 브릿지 시상금: 전월실적 구간별 지급률 적용
-        # 50만 이상 → 300%, 20만 이상 → 200%, 10만 이상 → 100%
-        if br2 >= 500000:
+        # 브릿지 시상금: 구간값(10/20/30/50만) 기준 지급률
+        # 50만 → 300%, 20~40만 → 200%, 10만 → 100%
+        if btir >= 500000:
             b_rate = 3.0
-        elif br2 >= 200000:
+        elif btir >= 200000:
             b_rate = 2.0
         else:
             b_rate = 1.0
-        bp = (br2 + 100000) * b_rate
+        bp = (btir + 100000) * b_rate
 
         # 연속가동 시상금: 동일 구간 로직
-        if cr2 >= 500000:
+        if ctir >= 500000:
             c_rate = 3.0
-        elif cr2 >= 200000:
+        elif ctir >= 200000:
             c_rate = 2.0
         else:
             c_rate = 1.0
-        cp = (cr2 + 100000) * c_rate
+        cp = (ctir + 100000) * c_rate
 
         tp = bp + cp
 
