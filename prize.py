@@ -668,6 +668,7 @@ def page_contact():
         bp = (btir + 100000) * b_rate
         tp = bp
 
+        achieved = (br3 >= 100000)
         if achieved:
             msg_default = f"달성!"
         else:
