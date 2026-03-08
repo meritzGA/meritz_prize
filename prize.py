@@ -528,9 +528,8 @@ def page_contact():
     st.markdown('<div class="title-band">📞 오늘 접촉 대상</div>', unsafe_allow_html=True)
 
     BRIDGE_COLS = [
-        '브릿지대상_2_3월', '브릿지실적구간_2월', '연속가동대상_2_3월',
-        '브릿지실적_2월', '연속가동실적_2월', '연속가동실적구간_2월',
-        '브릿지실적_3월', '브릿지부족금액_3월'
+        '브릿지대상_2_3월', '브릿지실적구간_2월',
+        '브릿지실적_2월', '브릿지실적_3월', '브릿지부족금액_3월'
     ]
 
     # ── 브릿지 파일 탐색 ─────────────────────────────────────
@@ -655,9 +654,6 @@ def page_contact():
         br2  = gv('브릿지실적_2월')
         brat = gv('브릿지대상_2_3월')
         btir = gv('브릿지실적구간_2월')
-        cr2  = gv('연속가동실적_2월')
-        crat = gv('연속가동대상_2_3월')
-        ctir = gv('연속가동실적구간_2월')
         br3  = gv('브릿지실적_3월')
         bsf  = gv('브릿지부족금액_3월')
 
@@ -670,20 +666,8 @@ def page_contact():
         else:
             b_rate = 1.0
         bp = (btir + 100000) * b_rate
+        tp = bp
 
-        # 연속가동 시상금: 동일 구간 로직
-        if ctir >= 500000:
-            c_rate = 3.0
-        elif ctir >= 200000:
-            c_rate = 2.0
-        else:
-            c_rate = 1.0
-        cp = (ctir + 100000) * c_rate
-
-        tp = bp + cp
-
-        # ④ 메시지 템플릿 (★ 강조) — 브릿지실적_3월 >= 10만 이면 달성 메시지
-        achieved = (br3 >= 100000)
         if achieved:
             msg_default = f"달성!"
         else:
@@ -691,14 +675,11 @@ def page_contact():
                 f"★{aname} 팀장님!★  안녕하세요. {display_mgr} 매니저입니다.\n"
                 f"팀장님 지난 2월 브릿지 실적 ★{br2:,.0f}원★ 하셔서 \n"
                 f"이번 주 10만원만 하시면 \n"
-                f"★{bp:,.0f}원★의 브릿지 시상금을 받으실 수 있고\n"
-                f"연속가동 실적 ★{cr2:,.0f}원★ 하셔서 \n"
-                f"동일하게 10만원만 하시면 \n"
-                f"★{cp:,.0f}원★을 받으실 수 있으십니다.\n\n"
+                f"★{bp:,.0f}원★의 브릿지 시상금을 받으실 수 있습니다.\n\n"
                 f"그런데 현재 ★{br3:,.0f}원★ 이셔서 \n"
                 f"★{bsf:,.0f}원★이 부족하세요. T_T\n"
                 f"오늘까지 꼭 10만원만 하시면 \n"
-                f"합산 ★{tp:,.0f}원★ 을 받으실 수 있는 \n"
+                f"★{bp:,.0f}원★ 을 받으실 수 있는 \n"
                 f"엄청난 상황이라 꼭 챙겨 드리려고 연락드렸습니다.\n\n"
                 f"오늘 10만원 하실 수 있는 플랜은 \n"
                 f"1. 가장 체결률 좋은 진단및치료비 + 비통치, 항암 26종 플랜\n"
@@ -709,9 +690,8 @@ def page_contact():
             )
         rows.append(dict(
             idx=i, aname=aname, agency=agency,
-            br2=br2, brat=brat, btir=btir,
-            cr2=cr2, crat=crat, ctir=ctir,
-            br3=br3, bsf=bsf, bp=bp, cp=cp, tp=tp,
+            br2=br2, btir=btir,
+            br3=br3, bsf=bsf, bp=bp, tp=tp,
             achieved=achieved, msg_default=msg_default
         ))
 
@@ -772,15 +752,10 @@ def page_contact():
                 <div style='font-size:0.9rem;color:#8b95a1;margin-bottom:8px;'>
                     📍 {r['agency'] if r['agency'] else '—'}
                 </div>
-                <div style='background:#fff8f8;border-radius:8px;padding:6px 10px;margin-bottom:4px;'>
-                    <span style='font-size:0.8rem;color:#8b95a1;'>브릿지</span>
+                <div style='background:#fff8f8;border-radius:8px;padding:6px 10px;margin-bottom:6px;'>
+                    <span style='font-size:0.8rem;color:#8b95a1;'>브릿지 시상금</span>
                     <span style='font-size:1.05rem;font-weight:800;color:rgb(128,0,0);
                                 float:right;'>{r['bp']:,.0f}원</span>
-                </div>
-                <div style='background:#f8f8ff;border-radius:8px;padding:6px 10px;margin-bottom:6px;'>
-                    <span style='font-size:0.8rem;color:#8b95a1;'>연속가동</span>
-                    <span style='font-size:1.05rem;font-weight:800;color:#1e3c72;
-                                float:right;'>{r['cp']:,.0f}원</span>
                 </div>
                 <div style='display:flex;justify-content:space-between;align-items:center;'>
                     <span style='font-size:1.15rem;font-weight:800;color:rgb(128,0,0);'>
@@ -843,17 +818,10 @@ def page_contact():
                 <div style='display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;'>
                     <div style='flex:1;min-width:120px;background:#fff8f8;
                                 border-radius:10px;padding:8px 10px;'>
-                        <div style='font-size:0.85rem;color:#8b95a1;'>브릿지 시상</div>
+                        <div style='font-size:0.85rem;color:#8b95a1;'>브릿지 시상금</div>
                         <div style='font-size:1.15rem;font-weight:800;
                                     color:rgb(128,0,0);'>{r['bp']:,.0f}원</div>
-                        <div style='font-size:0.8rem;color:#aaa;'>2월 {r['br2']:,.0f}원</div>
-                    </div>
-                    <div style='flex:1;min-width:120px;background:#f8f8ff;
-                                border-radius:10px;padding:8px 10px;'>
-                        <div style='font-size:0.85rem;color:#8b95a1;'>연속가동 시상</div>
-                        <div style='font-size:1.15rem;font-weight:800;
-                                    color:#1e3c72;'>{r['cp']:,.0f}원</div>
-                        <div style='font-size:0.8rem;color:#aaa;'>2월 {r['cr2']:,.0f}원</div>
+                        <div style='font-size:0.8rem;color:#aaa;'>2월 실적 {r['br2']:,.0f}원</div>
                     </div>
                 </div>
                 <div style='display:flex;justify-content:space-between;
