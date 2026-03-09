@@ -423,10 +423,6 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
 # 📞 오늘 접촉 대상 - 카카오 전송 컴포넌트
 # ==========================================
 def render_kakao_send_btn(msg_key, agent_name, btn_key, height=80):
-    """
-    버튼 클릭 시 parent DOM의 textarea 현재값을 직접 읽어 전송.
-    msg_key를 aria-label 검색용 식별자로 사용.
-    """
     html = f"""
     <div id="kw_{btn_key}" style="margin-top:6px;">
       <button id="kb_{btn_key}" onclick="doSend_{btn_key}()"
@@ -440,13 +436,10 @@ def render_kakao_send_btn(msg_key, agent_name, btn_key, height=80):
     </div>
     <script>
     function doSend_{btn_key}() {{
-        // 클릭 시점에 parent DOM의 textarea 현재값을 읽음
         var text = '';
         try {{
             var labelKey = '{msg_key}';
             var parentDoc = window.parent.document;
-            // Streamlit textarea: [data-testid="stTextArea"] 컨테이너 안에
-            // label의 텍스트 내용이 key와 일치하는 textarea를 찾음
             var containers = parentDoc.querySelectorAll('[data-testid="stTextArea"]');
             for (var i = 0; i < containers.length; i++) {{
                 var label = containers[i].querySelector('label');
@@ -455,7 +448,6 @@ def render_kakao_send_btn(msg_key, agent_name, btn_key, height=80):
                     text = ta.value; break;
                 }}
             }}
-            // 못 찾으면 aria-label 또는 id로 fallback
             if (!text) {{
                 var ta2 = parentDoc.querySelector('textarea[aria-label="' + labelKey + '"]') ||
                           parentDoc.querySelector('textarea[id*="' + labelKey + '"]');
@@ -463,14 +455,12 @@ def render_kakao_send_btn(msg_key, agent_name, btn_key, height=80):
             }}
         }} catch(e) {{}}
         var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-
         function showDone(msg) {{
             document.getElementById('kb_{btn_key}').style.display = 'none';
             var d = document.getElementById('kd_{btn_key}');
             d.style.display = 'block';
             d.innerHTML = msg;
         }}
-
         function copyToClipboard(cb) {{
             if (navigator.clipboard && window.isSecureContext) {{
                 navigator.clipboard.writeText(text).then(cb).catch(function() {{
@@ -478,35 +468,29 @@ def render_kakao_send_btn(msg_key, agent_name, btn_key, height=80):
                 }});
             }} else {{ legacyCopy(); cb(); }}
         }}
-
         function legacyCopy() {{
             var ta = document.createElement('textarea');
             ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
             document.body.appendChild(ta); ta.select();
             document.execCommand('copy'); document.body.removeChild(ta);
         }}
-
         if (isMobile) {{
-            // 모바일: Web Share API → 카카오 대상자 선택 화면
             if (navigator.share) {{
                 navigator.share({{ text: text }})
                     .then(function() {{ showDone('✅ 공유 완료!'); }})
                     .catch(function(e) {{
-                        // 취소하거나 실패 시 copy+launch fallback
                         copyToClipboard(function() {{
                             showDone('✅ 복사 완료! 카카오톡에서 붙여넣기 하세요.');
                             setTimeout(function() {{ window.location.href='kakaotalk://launch'; }}, 400);
                         }});
                     }});
             }} else {{
-                // Web Share 미지원 → copy + kakaotalk://launch
                 copyToClipboard(function() {{
                     showDone('✅ 복사! 카카오톡 실행 중...');
                     setTimeout(function() {{ window.location.href='kakaotalk://launch'; }}, 400);
                 }});
             }}
         }} else {{
-            // 데스크탑: 복사 후 2.5초 뒤 버튼 원복
             copyToClipboard(function() {{
                 showDone('✅ 복사 완료! 카카오톡 채팅창에 Ctrl+V 하세요.');
                 setTimeout(function() {{
@@ -533,7 +517,6 @@ def page_contact():
         '브릿지실적_3월', '브릿지부족금액_3월'
     ]
 
-    # ── 브릿지 파일 탐색 ─────────────────────────────────────
     bridge_df     = None
     mgr_code_col  = None
     agent_name_col= None
@@ -566,7 +549,6 @@ def page_contact():
     if missing_cols:
         st.warning(f"⚠️ 일부 컬럼 없음: {', '.join(missing_cols)}")
 
-    # ── 로그인 ────────────────────────────────────────────────
     if 'contact_logged_in' not in st.session_state:
         st.session_state.contact_logged_in = False
 
@@ -592,7 +574,6 @@ def page_contact():
                 if found:
                     st.session_state.contact_logged_in  = True
                     st.session_state.contact_mgr_code   = sic
-                    # 메시지 캐시 초기화
                     for k in list(st.session_state.keys()):
                         if k.startswith('cmsg_'): del st.session_state[k]
                     st.rerun()
@@ -600,7 +581,6 @@ def page_contact():
                     st.error(f"❌ 코드 '{mgr_input}'가 데이터에 없습니다.")
         return
 
-    # ── 로그인 성공 ──────────────────────────────────────────
     mgr_code = st.session_state.contact_mgr_code
     col_lo, _ = st.columns([2, 8])
     with col_lo:
@@ -608,7 +588,6 @@ def page_contact():
             st.session_state.contact_logged_in = False
             st.rerun()
 
-    # 매니저 이름
     mgr_name = ""
     if mgr_name_col and mgr_name_col in bridge_df.columns and mgr_code_col and mgr_code_col in bridge_df.columns:
         mdf = bridge_df[get_clean_series(bridge_df, mgr_code_col) == mgr_code]
@@ -625,7 +604,6 @@ def page_contact():
 
     display_mgr = mgr_name if mgr_name else mgr_code
 
-    # ── 데이터 필터 & 계산 ──────────────────────────────────
     if not (mgr_code_col and mgr_code_col in bridge_df.columns):
         st.error("⚠️ 매니저 코드 컬럼을 찾을 수 없습니다.")
         return
@@ -635,7 +613,6 @@ def page_contact():
         st.info("해당 매니저의 접촉 대상이 없습니다.")
         return
 
-    # ① 필터: 브릿지실적_2월 >= 100,000
     if '브릿지실적_2월' in raw_df.columns:
         raw_df = raw_df[raw_df['브릿지실적_2월'].apply(safe_float) >= 100000].reset_index(drop=True)
 
@@ -643,7 +620,6 @@ def page_contact():
         st.info("브릿지실적_2월 10만원 이상인 접촉 대상이 없습니다.")
         return
 
-    # 전체 계산 → rows 리스트
     rows = []
     for i, row in raw_df.iterrows():
         def gv(col, r=row):
@@ -659,13 +635,11 @@ def page_contact():
         br3  = gv('브릿지실적_3월')
         bsf  = gv('브릿지부족금액_3월')
 
-        # 브릿지 시상금
         if btir >= 500000:   b_rate = 3.0
         elif btir >= 200000: b_rate = 2.0
         else:                b_rate = 1.0
         bp = (btir + 100000) * b_rate
 
-        # 연속가동 시상금
         if ctir >= 500000:   c_rate = 3.0
         elif ctir >= 200000: c_rate = 2.0
         else:                c_rate = 1.0
@@ -704,8 +678,6 @@ def page_contact():
             achieved=achieved, msg_default=msg_default
         ))
 
-
-    # 합계 시상금 큰 순 (데스크탑/모바일 공통)
     rows.sort(key=lambda r: r['tp'], reverse=True)
 
     is_mobile = st.session_state.get('contact_view', 'desktop') == 'mobile'
@@ -729,15 +701,11 @@ def page_contact():
     else:
         st.caption("🖥️ 합계 시상금 큰 순 · 메시지 직접 수정 후 복사")
 
-    # ── 메시지 세션 초기화 (처음 로드 시 default 삽입) ─────
     for r in rows:
         skey = f"cmsg_{r['idx']}"
         if skey not in st.session_state:
             st.session_state[skey] = r['msg_default']
 
-    # ══════════════════════════════════════════════════════
-    # 🖥️ 데스크탑 뷰: 1줄 = 정보 | 메시지 편집 | 버튼
-    # ══════════════════════════════════════════════════════
     if not is_mobile:
         for r in rows:
             skey = f"cmsg_{r['idx']}"
@@ -804,9 +772,6 @@ def page_contact():
 
             st.markdown("<hr style='margin:6px 0 10px;opacity:0.1;'>", unsafe_allow_html=True)
 
-    # ══════════════════════════════════════════════════════
-    # 📱 모바일 뷰: 카드 → 메시지 편집 → 전송 버튼
-    # ══════════════════════════════════════════════════════
     else:
         for r in rows:
             skey = f"cmsg_{r['idx']}"
@@ -856,7 +821,6 @@ def page_contact():
             st.markdown(card_html, unsafe_allow_html=True)
 
             if r['achieved']:
-                # 달성자: 메시지 창(읽기 전용) + 카톡 버튼 없음
                 st.text_area(
                     f"({r['aname']})",
                     value=st.session_state[skey],
@@ -866,9 +830,8 @@ def page_contact():
                     label_visibility="collapsed"
                 )
             else:
-                # 미달성: 편집 가능 + 카톡 버튼
                 st.text_area(
-                    skey,           # label = skey → JS 검색용
+                    skey,
                     value=st.session_state[skey],
                     key=skey,
                     height=260,
@@ -876,6 +839,16 @@ def page_contact():
                 )
                 render_kakao_send_btn(skey, r['aname'], f"m{r['idx']}", height=80)
             st.markdown("<hr style='margin:12px 0;opacity:0.12;'>", unsafe_allow_html=True)
+
+
+# ==========================================
+# 🔄 순서 변경 헬퍼 함수
+# ==========================================
+def _swap_config(idx_a, idx_b):
+    """config 리스트에서 두 항목의 위치를 교환"""
+    cfg = st.session_state['config']
+    cfg[idx_a], cfg[idx_b] = cfg[idx_b], cfg[idx_a]
+    st.rerun()
 
 
 # ==========================================
@@ -1099,16 +1072,32 @@ elif mode == "⚙️ 시스템 관리자":
     weekly_cfgs=[(i,c) for i,c in enumerate(st.session_state['config']) if c.get('category','weekly')=='weekly']
     if not weekly_cfgs: st.info("현재 설정된 주차/브릿지 시상이 없습니다.")
 
-    def _get_idx(val, opts):
-        return opts.index(val) if val in opts else 0
-
-    for i, cfg in weekly_cfgs:
+    # ── 주차/브릿지 시상 항목 루프 (순서 변경 버튼 포함) ──
+    for seq, (i, cfg) in enumerate(weekly_cfgs):
         if 'desc' not in cfg: cfg['desc']=""
         st.markdown("<div class='config-box'>", unsafe_allow_html=True)
-        ct,cdl=st.columns([8,2])
-        with ct: st.markdown(f"<h3 class='config-title'>📌 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
+
+        # 헤더: 순서번호 | 시책명 | ⬆️ ⬇️ 삭제
+        ct, cup, cdn, cdl = st.columns([6, 1, 1, 2])
+        with ct:
+            st.markdown(f"<h3 class='config-title'>📌 [{seq+1}/{len(weekly_cfgs)}] {cfg['name']}</h3>", unsafe_allow_html=True)
+        with cup:
+            if seq > 0:
+                prev_real_idx = weekly_cfgs[seq - 1][0]
+                if st.button("⬆️", key=f"up_cfg_{i}", use_container_width=True):
+                    _swap_config(i, prev_real_idx)
+            else:
+                st.write("")  # placeholder
+        with cdn:
+            if seq < len(weekly_cfgs) - 1:
+                next_real_idx = weekly_cfgs[seq + 1][0]
+                if st.button("⬇️", key=f"dn_cfg_{i}", use_container_width=True):
+                    _swap_config(i, next_real_idx)
+            else:
+                st.write("")  # placeholder
         with cdl:
             if st.button("삭제",key=f"del_cfg_{i}",use_container_width=True): st.session_state['config'].pop(i); st.rerun()
+
         cfg['name']=st.text_input("시책명",value=cfg['name'],key=f"name_{i}")
         cfg['desc']=st.text_area("시책 설명",value=cfg.get('desc',''),key=f"desc_{i}",height=100)
         tidx=0
@@ -1205,14 +1194,34 @@ elif mode == "⚙️ 시스템 관리자":
                 "file":file_opts[0],"col_code":"","col_val":"",
                 "prize_items":[{"label":"시상금","file":"","col_code_ext":"","col_eligible":"","col_prize":""}]
             }); st.rerun()
+
     cumul_cfgs=[(i,c) for i,c in enumerate(st.session_state['config']) if c.get('category')=='cumulative']
     if not cumul_cfgs: st.info("현재 설정된 누계 항목이 없습니다.")
-    for i, cfg in cumul_cfgs:
+
+    # ── 누계 시상 항목 루프 (순서 변경 버튼 포함) ──
+    for seq, (i, cfg) in enumerate(cumul_cfgs):
         st.markdown("<div class='config-box-blue'>", unsafe_allow_html=True)
-        ct,cdl=st.columns([8,2])
-        with ct: st.markdown(f"<h3 class='config-title' style='color:#1e3c72;'>📘 {cfg['name']} 설정</h3>", unsafe_allow_html=True)
+
+        ct, cup, cdn, cdl = st.columns([6, 1, 1, 2])
+        with ct:
+            st.markdown(f"<h3 class='config-title' style='color:#1e3c72;'>📘 [{seq+1}/{len(cumul_cfgs)}] {cfg['name']}</h3>", unsafe_allow_html=True)
+        with cup:
+            if seq > 0:
+                prev_real_idx = cumul_cfgs[seq - 1][0]
+                if st.button("⬆️", key=f"cup_cfg_{i}", use_container_width=True):
+                    _swap_config(i, prev_real_idx)
+            else:
+                st.write("")
+        with cdn:
+            if seq < len(cumul_cfgs) - 1:
+                next_real_idx = cumul_cfgs[seq + 1][0]
+                if st.button("⬇️", key=f"cdn_cfg_{i}", use_container_width=True):
+                    _swap_config(i, next_real_idx)
+            else:
+                st.write("")
         with cdl:
             if st.button("삭제",key=f"del_cfg_{i}",use_container_width=True): st.session_state['config'].pop(i); st.rerun()
+
         cfg['name']=st.text_input("누계 항목명",value=cfg['name'],key=f"name_{i}")
         cfg['file']=st.selectbox("📂 기본 파일",file_opts,index=_get_idx(cfg.get('file',''),file_opts) if file_opts else 0,key=f"file_{i}")
         cols=_get_cols_for_file(cfg['file'])
