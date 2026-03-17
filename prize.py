@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -336,6 +335,30 @@ def calculate_agent_performance(target_code):
                     if vp < amt: next_tier = amt; break
                 curr_met = vc >= curr_req
                 calculated_results.append({"name":cfg['name'],"desc":cfg.get('desc',''),"category":"weekly","type":"브릿지2","val_prev":vp,"val_curr":vc,"tier":tier_achieved,"rate":calc_rate,"prize":prize,"curr_req":curr_req,"next_tier":next_tier,"shortfall":next_tier - vp if next_tier else 0,"curr_met":curr_met})
+            elif "주차브릿지" in p_type:
+                # ── 주차브릿지: 3주 실적 기준, 4주 동일 가동 시 예상 시상금 ──
+                w3 = safe_float(match_df[cfg['col_val_w3']].values[0]) if cfg.get('col_val_w3') and cfg['col_val_w3'] in df.columns else 0
+                w3_label = cfg.get('w3_label', '3주')
+                w4_label = cfg.get('w4_label', '4주')
+                # 구간 테이블로 예상 시상금 산출 (3주 실적 기준)
+                wb_tiers = cfg.get('weekly_bridge_tiers', [])
+                tier_achieved = 0; projected_prize = 0
+                for threshold, prize_amt in wb_tiers:
+                    if w3 >= threshold:
+                        tier_achieved = threshold; projected_prize = prize_amt; break
+                next_tier = None; next_tier_prize = 0
+                for threshold, prize_amt in reversed(wb_tiers):
+                    if w3 < threshold: next_tier = threshold; next_tier_prize = prize_amt; break
+                shortfall = max(0, (next_tier or 0) - w3) if next_tier else 0
+                if w3 == 0: continue
+                calculated_results.append({
+                    "name":cfg['name'],"desc":cfg.get('desc',''),"category":"weekly","type":"주차브릿지",
+                    "val_w3":w3,
+                    "tier":tier_achieved,"prize":projected_prize,
+                    "next_tier":next_tier,"next_tier_prize":next_tier_prize if next_tier else 0,
+                    "shortfall":shortfall,
+                    "w3_label":w3_label,"w4_label":w4_label
+                })
             else:
                 if not prize_details: continue
                 v = safe_float(match_df[cfg['col_val']].values[0]) if cfg.get('col_val') and cfg['col_val'] in df.columns else 0
@@ -364,6 +387,10 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
             elif res['type'] == "브릿지2":
                 sh += f"<div class='data-row' style='padding:6px 0;align-items:flex-start;'><span class='summary-item-name'>{res['name']}<br><span style='font-size:0.95rem;color:rgba(255,255,255,0.7);'>(이번 달 {int(res['curr_req']//10000)}만 가동 조건)</span></span><span class='summary-item-val'>{res['prize']:,.0f}원</span></div>"
                 share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 (이번 달 {int(res['curr_req']//10000)}만 가동 조건)\n"
+            elif res['type'] == "주차브릿지":
+                w3l = res.get('w3_label','3주'); w4l = res.get('w4_label','4주')
+                sh += f"<div class='data-row' style='padding:6px 0;align-items:flex-start;'><span class='summary-item-name'>{res['name']}<br><span style='font-size:0.95rem;color:rgba(255,255,255,0.7);'>({w4l} 동일 가동 시 예상)</span></span><span class='summary-item-val'>{res['prize']:,.0f}원</span></div>"
+                share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원 ({w4l} 동일 가동 시 예상)\n"
             else:
                 sh += f"<div class='data-row' style='padding:6px 0;'><span class='summary-item-name'>{res['name']}</span><span class='summary-item-val'>{res['prize']:,.0f}원</span></div>"
                 share_text += f"🔹 {res['name']}: {res['prize']:,.0f}원\n"
@@ -396,6 +423,35 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                 ch = f"<div class='toss-card'><div class='toss-title'>{res['name']}</div><div class='toss-desc'>{desc_html}</div><div class='data-row'><span class='data-label'>전월 브릿지 실적</span><span class='data-value'>{res['val_prev']:,.0f}원</span></div><div class='data-row'><span class='data-label'>확보한 구간 기준</span><span class='data-value'>{res['tier']:,.0f}원</span></div><div class='data-row'><span class='data-label'>예상 적용 지급률</span><span class='data-value'>{res['rate']:g}%</span></div><div class='toss-divider'></div><div class='data-row'><span class='data-label'>당월 실적</span><span class='data-value'>{res['val_curr']:,.0f}원</span></div>{curr_status}<div class='toss-divider'></div><div class='prize-row'><span class='prize-label'>{prize_label}</span><span class='prize-value'>{res['prize']:,.0f}원</span></div></div>"
                 met_txt = "달성 ✅" if res.get('curr_met') else "미달 ❌"
                 share_text += f"\n[{res['name']}]\n- 2/19~28일 실적: {res['val_prev']:,.0f}원 (구간: {res['tier']:,.0f}원)\n- 당월실적: {res['val_curr']:,.0f}원 ({curr_req_val}만 가동 {met_txt})\n- 예상시상: {res['prize']:,.0f}원\n"
+            elif res['type'] == "주차브릿지":
+                w3l = res.get('w3_label','3주'); w4l = res.get('w4_label','4주')
+                tier_txt = f"{res['tier']:,.0f}원" if res['tier'] > 0 else "미달성"
+                # 다음 구간 안내
+                shortfall_html = ""
+                if res.get('next_tier') and res['shortfall'] > 0:
+                    shortfall_html = (
+                        f"<div class='shortfall-row'><div class='shortfall-text'>"
+                        f"📈 {res['shortfall']:,.0f}원 더 하면 → {res['next_tier']:,.0f}원 구간 "
+                        f"(시상금 {res['next_tier_prize']:,.0f}원)</div></div>"
+                    )
+                ch = (
+                    f"<div class='toss-card'>"
+                    f"<div class='toss-title'>{res['name']}</div>"
+                    f"<div class='toss-desc'>{desc_html}</div>"
+                    f"<div class='data-row'><span class='data-label'>{w3l} 실적</span><span class='data-value'>{res['val_w3']:,.0f}원</span></div>"
+                    f"<div class='data-row'><span class='data-label'>확보 구간</span><span class='data-value'>{tier_txt}</span></div>"
+                    f"<div class='toss-divider'></div>"
+                    f"{shortfall_html}"
+                    f"<div class='prize-row'><span class='prize-label'>{w4l} 동일 가동 시<br>예상 시상금</span><span class='prize-value'>{res['prize']:,.0f}원</span></div>"
+                    f"</div>"
+                )
+                share_text += (
+                    f"\n[{res['name']}]\n"
+                    f"- {w3l} 실적: {res['val_w3']:,.0f}원 (구간: {tier_txt})\n"
+                    f"- {w4l} 동일 가동 시 예상시상: {res['prize']:,.0f}원\n"
+                )
+                if res.get('next_tier') and res['shortfall'] > 0:
+                    share_text += f"  📈 {res['shortfall']:,.0f}원 더 하면 → {res['next_tier_prize']:,.0f}원\n"
             st.markdown(ch, unsafe_allow_html=True)
     if cumul_res:
         ch = f"<div class='cumulative-card'><div class='summary-label'>{user_name} 팀장님의 월간 누계 시상</div><div class='summary-total'>{cumul_total:,.0f}원</div><div class='summary-divider'></div>"
@@ -1061,6 +1117,8 @@ elif mode == "⚙️ 시스템 관리자":
                     "desc":"","category":"weekly","type":"구간 시책",
                     "file":file_opts[0],"col_name":"","col_code":"","col_branch":"","col_agency":"","col_manager_code":"",
                     "col_val":"","col_val_prev":"","col_val_curr":"",
+                    "col_val_w3":"","w3_label":"3주","w4_label":"4주",
+                    "weekly_bridge_tiers":[(500000,3000000),(300000,1500000),(200000,800000),(100000,200000)],
                     "prize_items":[{"label":"시상금","file":"","col_code_ext":"","col_eligible":"","col_prize":""}],
                     "curr_req":100000.0,"tiers":[(500000,300),(300000,200),(200000,200),(100000,100)]
                 }); st.rerun()
@@ -1101,10 +1159,20 @@ elif mode == "⚙️ 시스템 관리자":
 
         cfg['name']=st.text_input("시책명",value=cfg['name'],key=f"name_{i}")
         cfg['desc']=st.text_area("시책 설명",value=cfg.get('desc',''),key=f"desc_{i}",height=100)
+
+        # ── 시책 종류 라디오 (4개) ──
+        TYPE_OPTIONS = [
+            "구간 시책",
+            "브릿지 시책 (1기간: 시상 확정)",
+            "브릿지 시책 (2기간: 당월 달성 조건)",
+            "주차브릿지 시책 (동일주차 가동)"
+        ]
         tidx=0
         if "1기간" in cfg['type']: tidx=1
         elif "2기간" in cfg['type']: tidx=2
-        cfg['type']=st.radio("시책 종류",["구간 시책","브릿지 시책 (1기간: 시상 확정)","브릿지 시책 (2기간: 당월 달성 조건)"],index=tidx,horizontal=True,key=f"type_{i}")
+        elif "주차브릿지" in cfg['type']: tidx=3
+        cfg['type']=st.radio("시책 종류",TYPE_OPTIONS,index=tidx,horizontal=True,key=f"type_{i}")
+
         cfg['file']=st.selectbox("📂 기본 파일 (인적사항+실적)",file_opts,index=_get_idx(cfg.get('file',''),file_opts) if file_opts else 0,key=f"file_{i}")
         cols=_get_cols_for_file(cfg['file'])
         c1,c2=st.columns(2)
@@ -1125,6 +1193,24 @@ elif mode == "⚙️ 시스템 관리자":
             elif "2기간" in cfg['type']:
                 cfg['col_val_prev']=st.selectbox("전월 브릿지 실적",cols,index=_get_idx(cfg.get('col_val_prev',''),cols),key=f"cvalp2_{i}")
                 cfg['col_val_curr']=st.selectbox("당월 실적",cols,index=_get_idx(cfg.get('col_val_curr',''),cols),key=f"cvalc2_{i}")
+            elif "주차브릿지" in cfg['type']:
+                # ── 주차브릿지 전용 설정 ──
+                cfg['w3_label']=st.text_input("기준 주차 라벨",value=cfg.get('w3_label','3주'),key=f"w3lbl_{i}")
+                cfg['w4_label']=st.text_input("가동 주차 라벨",value=cfg.get('w4_label','4주'),key=f"w4lbl_{i}")
+                cfg['col_val_w3']=st.selectbox(f"{cfg.get('w3_label','3주')} 실적 컬럼",cols,index=_get_idx(cfg.get('col_val_w3',''),cols),key=f"cvalw3_{i}")
+                st.caption(f"💡 {cfg.get('w3_label','3주')} 실적 기준으로 {cfg.get('w4_label','4주')} 동일 가동 시 예상 시상금을 보여줍니다")
+                st.write("📈 구간 설정 (동일 가동 기준금액, 시상금)")
+                wb_tiers = cfg.get('weekly_bridge_tiers', [(500000,3000000),(300000,1500000),(200000,800000),(100000,200000)])
+                ts = "\n".join([f"{int(t[0])},{int(t[1])}" for t in wb_tiers])
+                ti = st.text_area("엔터로 줄바꿈 (기준금액,시상금)",value=ts,height=150,key=f"wbtier_{i}")
+                try:
+                    nt = []
+                    for line in ti.strip().split('\n'):
+                        if ',' in line:
+                            p = line.split(',')
+                            nt.append((float(p[0].strip()), float(p[1].strip())))
+                    cfg['weekly_bridge_tiers'] = sorted(nt, key=lambda x: x[0], reverse=True)
+                except: st.error("형식 오류: '기준금액,시상금' 형태로 입력하세요")
             else:
                 cfg['col_val']=st.selectbox("실적 수치",cols,index=_get_idx(cfg.get('col_val',''),cols),key=f"cval_{i}")
             if "2기간" in cfg['type']:
@@ -1139,7 +1225,8 @@ elif mode == "⚙️ 시스템 관리자":
                         if ',' in line: p=line.split(','); nt.append((float(p[0].strip()),float(p[1].strip())))
                     cfg['tiers']=sorted(nt,key=lambda x:x[0],reverse=True)
                 except: st.error("형식 오류")
-            else:
+            # 시상금 항목 (2기간 브릿지·주차브릿지는 자체 구간 테이블로 계산)
+            if "2기간" not in cfg['type'] and "주차브릿지" not in cfg['type']:
                 st.markdown("**💰 시상금 항목** <small style='color:#8b95a1;'>— 항목별로 다른 파일 선택 가능</small>", unsafe_allow_html=True)
                 if 'prize_items' not in cfg:
                     old_col=cfg.pop('col_prize','') or cfg.pop('col','')
