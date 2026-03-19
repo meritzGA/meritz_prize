@@ -14,6 +14,26 @@ if not os.path.exists(DATA_DIR): os.makedirs(DATA_DIR)
 
 LOG_FILE = os.path.join(DATA_DIR, "access_log.csv")
 
+# ★ 추가: 전역 설정 파일 (기준일 등)
+GLOBAL_CONFIG_FILE = os.path.join(DATA_DIR, "global_config.json")
+
+def load_global_config():
+    if os.path.exists(GLOBAL_CONFIG_FILE):
+        try:
+            with open(GLOBAL_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+def save_global_config(gcfg):
+    with open(GLOBAL_CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(gcfg, f, ensure_ascii=False, indent=2)
+
+if 'global_config' not in st.session_state:
+    st.session_state['global_config'] = load_global_config()
+# ★ 추가 끝
+
 # ==========================================
 # 🔧 numpy 타입 JSON 직렬화 지원
 # ==========================================
@@ -196,6 +216,8 @@ st.markdown("""
     span.material-symbols-rounded, span[data-testid="stIconMaterial"] { display: none !important; }
     div[data-testid="stRadio"] > div { display:flex; justify-content:center; background-color:#ffffff; padding:10px; border-radius:15px; margin-bottom:20px; margin-top:10px; box-shadow:0 4px 15px rgba(0,0,0,0.03); border:1px solid #e5e8eb; }
     .title-band { background-color:rgb(128,0,0); color:#ffffff; font-size:1.4rem; font-weight:800; text-align:center; padding:16px; border-radius:12px; margin-bottom:24px; letter-spacing:-0.5px; box-shadow:0 4px 10px rgba(128,0,0,0.2); }
+    /* ★ 추가: 기준일 배지 */
+    .date-badge { display:inline-block; background:rgba(255,255,255,0.15); color:rgba(255,255,255,0.9); font-size:0.85rem; font-weight:600; padding:4px 12px; border-radius:20px; margin-top:6px; }
     [data-testid="stForm"] { background-color:transparent; border:none; padding:0; margin-bottom:24px; }
     .admin-title { color:#191f28; font-weight:800; font-size:1.8rem; margin-top:20px; }
     .sub-title { color:#191f28; font-size:1.4rem; margin-top:30px; font-weight:700; }
@@ -336,11 +358,9 @@ def calculate_agent_performance(target_code):
                 curr_met = vc >= curr_req
                 calculated_results.append({"name":cfg['name'],"desc":cfg.get('desc',''),"category":"weekly","type":"브릿지2","val_prev":vp,"val_curr":vc,"tier":tier_achieved,"rate":calc_rate,"prize":prize,"curr_req":curr_req,"next_tier":next_tier,"shortfall":next_tier - vp if next_tier else 0,"curr_met":curr_met})
             elif "주차브릿지" in p_type:
-                # ── 주차브릿지: 3주 실적 기준, 4주 동일 가동 시 예상 시상금 ──
                 w3 = safe_float(match_df[cfg['col_val_w3']].values[0]) if cfg.get('col_val_w3') and cfg['col_val_w3'] in df.columns else 0
                 w3_label = cfg.get('w3_label', '3주')
                 w4_label = cfg.get('w4_label', '4주')
-                # 구간 테이블로 예상 시상금 산출 (3주 실적 기준)
                 wb_tiers = cfg.get('weekly_bridge_tiers', [])
                 tier_achieved = 0; projected_prize = 0
                 for threshold, prize_amt in wb_tiers:
@@ -372,13 +392,22 @@ def calculate_agent_performance(target_code):
 
 def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_text=False):
     if not calculated_results: return
+
+    # ★ 추가: 기준일 가져오기
+    data_date = st.session_state.get('global_config', {}).get('data_date', '')
+    date_html = f"<div class='date-badge'>📅 기준일: {data_date}</div>" if data_date else ""
+
     weekly_res = [r for r in calculated_results if r['category'] == 'weekly']
     cumul_res = [r for r in calculated_results if r['category'] == 'cumulative']
     weekly_total = sum(r['prize'] for r in weekly_res)
     cumul_total = sum(r['prize'] for r in cumul_res)
-    share_text = f"🎯 [{user_name} 팀장님 실적 현황]\n💰 총 합산 시상금: {total_prize_sum:,.0f}원\n────────────────\n"
+    share_text = f"🎯 [{user_name} 팀장님 실적 현황]\n"
+    if data_date:
+        share_text += f"📅 기준일: {data_date}\n"
+    share_text += f"💰 총 합산 시상금: {total_prize_sum:,.0f}원\n────────────────\n"
     if weekly_res:
-        sh = f"<div class='summary-card'><div class='summary-label'>{user_name} 팀장님의 시책 현황</div><div class='summary-total'>{weekly_total:,.0f}원</div><div class='summary-divider'></div>"
+        # ★ 수정: summary-card 안에 기준일 표시
+        sh = f"<div class='summary-card'><div class='summary-label'>{user_name} 팀장님의 시책 현황</div>{date_html}<div class='summary-total'>{weekly_total:,.0f}원</div><div class='summary-divider'></div>"
         share_text += "📌 [진행 중인 시책]\n"
         for res in weekly_res:
             if res['type'] == "브릿지1":
@@ -426,7 +455,6 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
             elif res['type'] == "주차브릿지":
                 w3l = res.get('w3_label','3주'); w4l = res.get('w4_label','4주')
                 tier_txt = f"{res['tier']:,.0f}원" if res['tier'] > 0 else "미달성"
-                # 다음 구간 안내
                 shortfall_html = ""
                 if res.get('next_tier') and res['shortfall'] > 0:
                     shortfall_html = (
@@ -454,7 +482,9 @@ def render_ui_cards(user_name, calculated_results, total_prize_sum, show_share_t
                     share_text += f"  📈 {res['shortfall']:,.0f}원 더 하면 → {res['next_tier_prize']:,.0f}원\n"
             st.markdown(ch, unsafe_allow_html=True)
     if cumul_res:
-        ch = f"<div class='cumulative-card'><div class='summary-label'>{user_name} 팀장님의 월간 누계 시상</div><div class='summary-total'>{cumul_total:,.0f}원</div><div class='summary-divider'></div>"
+        # ★ 수정: cumulative-card에도 기준일 표시 (weekly가 없을 때를 위해)
+        date_in_cumul = date_html if not weekly_res else ""
+        ch = f"<div class='cumulative-card'><div class='summary-label'>{user_name} 팀장님의 월간 누계 시상</div>{date_in_cumul}<div class='summary-total'>{cumul_total:,.0f}원</div><div class='summary-divider'></div>"
         share_text += f"\n🏆 [월간 확정 누계 시상]\n"
         for res in cumul_res:
             ch += f"<div class='data-row' style='padding:6px 0;'><span class='summary-item-name'>{res['name']}</span><span class='summary-item-val'>{res['prize']:,.0f}원</span></div>"
@@ -902,7 +932,6 @@ def page_contact():
 # 🔄 순서 변경 헬퍼 함수
 # ==========================================
 def _swap_config(idx_a, idx_b):
-    """config 리스트에서 두 항목의 위치를 교환"""
     cfg = st.session_state['config']
     cfg[idx_a], cfg[idx_b] = cfg[idx_b], cfg[idx_a]
     st.rerun()
@@ -1056,6 +1085,20 @@ elif mode == "⚙️ 시스템 관리자":
             st.download_button("📊 접속 로그 다운로드",data=f,file_name=f"access_log_{datetime.now().strftime('%Y%m%d')}.csv",mime="text/csv")
     st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
 
+    # ★ 추가: [0] 기준일 설정 섹션
+    st.markdown("<h3 class='sub-title'>📅 0. 기준일 설정</h3>", unsafe_allow_html=True)
+    st.caption("실적 조회 화면 상단과 카카오톡 공유 메시지에 표시됩니다.")
+    gcfg = st.session_state.get('global_config', {})
+    current_date = gcfg.get('data_date', '')
+    new_date = st.text_input("데이터 기준일 (예: 2026.03.19)", value=current_date, key="admin_data_date")
+    if st.button("📅 기준일 저장", key="save_data_date"):
+        gcfg['data_date'] = new_date
+        st.session_state['global_config'] = gcfg
+        save_global_config(gcfg)
+        st.success(f"✅ 기준일이 '{new_date}'로 저장되었습니다.")
+    st.markdown("<hr style='margin:15px 0;'>", unsafe_allow_html=True)
+    # ★ 추가 끝
+
     # --- [1] 파일 업로드 ---
     st.markdown("<h3 class='sub-title'>📂 1. 실적 파일 업로드 및 관리</h3>", unsafe_allow_html=True)
     st.info("💡 시상 항목이 여러 파일에 나뉘어 있으면 모두 업로드하세요. 브릿지 파일도 여기서 업로드하세요.")
@@ -1131,12 +1174,10 @@ elif mode == "⚙️ 시스템 관리자":
     weekly_cfgs=[(i,c) for i,c in enumerate(st.session_state['config']) if c.get('category','weekly')=='weekly']
     if not weekly_cfgs: st.info("현재 설정된 주차/브릿지 시상이 없습니다.")
 
-    # ── 주차/브릿지 시상 항목 루프 (순서 변경 버튼 포함) ──
     for seq, (i, cfg) in enumerate(weekly_cfgs):
         if 'desc' not in cfg: cfg['desc']=""
         st.markdown("<div class='config-box'>", unsafe_allow_html=True)
 
-        # 헤더: 순서번호 | 시책명 | ⬆️ ⬇️ 삭제
         ct, cup, cdn, cdl = st.columns([6, 1, 1, 2])
         with ct:
             st.markdown(f"<h3 class='config-title'>📌 [{seq+1}/{len(weekly_cfgs)}] {cfg['name']}</h3>", unsafe_allow_html=True)
@@ -1146,21 +1187,20 @@ elif mode == "⚙️ 시스템 관리자":
                 if st.button("⬆️", key=f"up_cfg_{i}", use_container_width=True):
                     _swap_config(i, prev_real_idx)
             else:
-                st.write("")  # placeholder
+                st.write("")
         with cdn:
             if seq < len(weekly_cfgs) - 1:
                 next_real_idx = weekly_cfgs[seq + 1][0]
                 if st.button("⬇️", key=f"dn_cfg_{i}", use_container_width=True):
                     _swap_config(i, next_real_idx)
             else:
-                st.write("")  # placeholder
+                st.write("")
         with cdl:
             if st.button("삭제",key=f"del_cfg_{i}",use_container_width=True): st.session_state['config'].pop(i); st.rerun()
 
         cfg['name']=st.text_input("시책명",value=cfg['name'],key=f"name_{i}")
         cfg['desc']=st.text_area("시책 설명",value=cfg.get('desc',''),key=f"desc_{i}",height=100)
 
-        # ── 시책 종류 라디오 (4개) ──
         TYPE_OPTIONS = [
             "구간 시책",
             "브릿지 시책 (1기간: 시상 확정)",
@@ -1194,7 +1234,6 @@ elif mode == "⚙️ 시스템 관리자":
                 cfg['col_val_prev']=st.selectbox("전월 브릿지 실적",cols,index=_get_idx(cfg.get('col_val_prev',''),cols),key=f"cvalp2_{i}")
                 cfg['col_val_curr']=st.selectbox("당월 실적",cols,index=_get_idx(cfg.get('col_val_curr',''),cols),key=f"cvalc2_{i}")
             elif "주차브릿지" in cfg['type']:
-                # ── 주차브릿지 전용 설정 ──
                 cfg['w3_label']=st.text_input("기준 주차 라벨",value=cfg.get('w3_label','3주'),key=f"w3lbl_{i}")
                 cfg['w4_label']=st.text_input("가동 주차 라벨",value=cfg.get('w4_label','4주'),key=f"w4lbl_{i}")
                 cfg['col_val_w3']=st.selectbox(f"{cfg.get('w3_label','3주')} 실적 컬럼",cols,index=_get_idx(cfg.get('col_val_w3',''),cols),key=f"cvalw3_{i}")
@@ -1225,7 +1264,6 @@ elif mode == "⚙️ 시스템 관리자":
                         if ',' in line: p=line.split(','); nt.append((float(p[0].strip()),float(p[1].strip())))
                     cfg['tiers']=sorted(nt,key=lambda x:x[0],reverse=True)
                 except: st.error("형식 오류")
-            # 시상금 항목 (2기간 브릿지·주차브릿지는 자체 구간 테이블로 계산)
             if "2기간" not in cfg['type'] and "주차브릿지" not in cfg['type']:
                 st.markdown("**💰 시상금 항목** <small style='color:#8b95a1;'>— 항목별로 다른 파일 선택 가능</small>", unsafe_allow_html=True)
                 if 'prize_items' not in cfg:
@@ -1286,7 +1324,6 @@ elif mode == "⚙️ 시스템 관리자":
     cumul_cfgs=[(i,c) for i,c in enumerate(st.session_state['config']) if c.get('category')=='cumulative']
     if not cumul_cfgs: st.info("현재 설정된 누계 항목이 없습니다.")
 
-    # ── 누계 시상 항목 루프 (순서 변경 버튼 포함) ──
     for seq, (i, cfg) in enumerate(cumul_cfgs):
         st.markdown("<div class='config-box-blue'>", unsafe_allow_html=True)
 
@@ -1418,7 +1455,11 @@ elif mode == "⚙️ 시스템 관리자":
 # 🏆 사용자 모드
 # ==========================================
 else:
-    st.markdown('<div class="title-band">메리츠화재 시상 현황</div>', unsafe_allow_html=True)
+    # ★ 수정: title-band에 기준일 표시
+    data_date = st.session_state.get('global_config', {}).get('data_date', '')
+    title_date_html = f"<br><span style='font-size:0.85rem;font-weight:600;opacity:0.85;'>📅 기준일: {data_date}</span>" if data_date else ""
+    st.markdown(f'<div class="title-band">메리츠화재 시상 현황{title_date_html}</div>', unsafe_allow_html=True)
+
     st.markdown("<h3 class='main-title'>이름과 지점별 코드를 입력하세요.</h3>", unsafe_allow_html=True)
     user_name=st.text_input("본인 이름",placeholder="예: 홍길동")
     branch_code_input=st.text_input("지점별 코드",placeholder="예: 1지점은 1, 11지점은 11")
