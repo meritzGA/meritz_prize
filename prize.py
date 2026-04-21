@@ -439,9 +439,6 @@ def render_ui_cards(user_name, results, total_prize, data_date, show_share=False
 
             elif r['type'] == '주차연속가동':
                 tier3_txt = f"{r['tier_3w']:,.0f}원 구간" if r.get('tier_3w', 0) > 0 else "미달성"
-                sf_html = ""
-                if r.get('shortfall', 0) > 0:
-                    sf_html = f"<div class='shortfall-row'><div class='shortfall-text'>⚠️ 4주 부족금액: {r['shortfall']:,.0f}원 (목표: {r.get('target',0):,.0f}원)</div></div>"
                 # 4주 실적이 있으면 표시
                 w4_html = ""
                 if r.get('perf_4w', 0) > 0:
@@ -465,7 +462,6 @@ def render_ui_cards(user_name, results, total_prize, data_date, show_share=False
                     f"<div class='data-row'><span class='data-label'>3주 확보 구간</span><span class='data-value'>{tier3_txt}</span></div>"
                     f"{w4_html}"
                     f"<div class='toss-divider'></div>"
-                    f"{sf_html}"
                     f"{prize_html}"
                     f"</div>"
                 )
@@ -476,8 +472,6 @@ def render_ui_cards(user_name, results, total_prize, data_date, show_share=False
                     share += f"- 시상금: {r['prize']:,.0f}원\n"
                 else:
                     share += "- 시상금: 추후 확정\n"
-                if r.get('shortfall', 0) > 0:
-                    share += f"  ⚠️ 부족: {r['shortfall']:,.0f}원\n"
 
             else:
                 continue
