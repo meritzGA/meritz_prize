@@ -386,9 +386,8 @@ def render_ui_cards(user_name, results, total_prize, data_date, show_share=False
                 sh += f"<div class='data-row' style='padding:6px 0;'><span class='summary-item-name'>{r['name']}</span><span class='summary-item-val'>{r['prize']:,.0f}원</span></div>"
                 share += f"🔹 {r['name']}: {r['prize']:,.0f}원\n"
             elif r['type'] in ('브릿지_확정', '연속가동 브릿지'):
-                cond = "(당월 가동 조건)" if r.get('shortfall', 0) > 0 else ""
-                sh += f"<div class='data-row' style='padding:6px 0;align-items:flex-start;'><span class='summary-item-name'>{r['name']}<br><span style='font-size:0.95rem;color:rgba(255,255,255,0.7);'>{cond}</span></span><span class='summary-item-val'>{r['prize']:,.0f}원</span></div>"
-                share += f"🔹 {r['name']}: {r['prize']:,.0f}원 {cond}\n"
+                sh += f"<div class='data-row' style='padding:6px 0;'><span class='summary-item-name'>{r['name']}</span><span class='summary-item-val'>{r['prize']:,.0f}원</span></div>"
+                share += f"🔹 {r['name']}: {r['prize']:,.0f}원\n"
             elif r['type'] == '주차연속가동':
                 tier_txt = f"{r['tier_3w']:,.0f}원 구간" if r.get('tier_3w', 0) > 0 else "미달성"
                 if r.get('has_prize') and r['prize'] > 0:
@@ -418,9 +417,6 @@ def render_ui_cards(user_name, results, total_prize, data_date, show_share=False
 
             elif r['type'] in ('브릿지_확정', '연속가동 브릿지'):
                 lp, lc = r.get('label_prev', '전월'), r.get('label_curr', '당월')
-                sf_html = ""
-                if r.get('shortfall', 0) > 0:
-                    sf_html = f"<div class='shortfall-row'><div class='shortfall-text'>⚠️ {lc} 부족금액: {r['shortfall']:,.0f}원 (목표: {r.get('target',0):,.0f}원)</div></div>"
                 icon = "🌉" if "브릿지" in r['type'] else "🔗"
                 ch = (
                     f"<div class='toss-card'>"
@@ -429,13 +425,10 @@ def render_ui_cards(user_name, results, total_prize, data_date, show_share=False
                     f"<div class='data-row'><span class='data-label'>{lp} 실적</span><span class='data-value'>{r['val_prev']:,.0f}원</span></div>"
                     f"<div class='data-row'><span class='data-label'>{lc} 실적</span><span class='data-value'>{r['val_curr']:,.0f}원</span></div>"
                     f"<div class='toss-divider'></div>"
-                    f"{sf_html}"
                     f"<div class='prize-row'><span class='prize-label'>시상금</span><span class='prize-value'>{r['prize']:,.0f}원</span></div>"
                     f"</div>"
                 )
                 share += f"\n[{r['name']}]\n- {lp}: {r['val_prev']:,.0f}원 / {lc}: {r['val_curr']:,.0f}원\n- 시상금: {r['prize']:,.0f}원\n"
-                if r.get('shortfall', 0) > 0:
-                    share += f"  ⚠️ 부족: {r['shortfall']:,.0f}원\n"
 
             elif r['type'] == '주차연속가동':
                 tier3_txt = f"{r['tier_3w']:,.0f}원 구간" if r.get('tier_3w', 0) > 0 else "미달성"
