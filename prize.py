@@ -86,15 +86,25 @@ def load_settings():
 def find_latest_files():
     if not os.path.exists(DATA_DIR):
         return None, None, None
-    def _latest(pattern):
-        files = glob.glob(os.path.join(DATA_DIR, pattern))
+    def _latest(pattern_base):
+        # parquet 우선, 같은 날짜에 parquet/xlsx 둘 다 있으면 parquet 사용
+        pq = glob.glob(os.path.join(DATA_DIR, pattern_base + ".parquet"))
+        xl = glob.glob(os.path.join(DATA_DIR, pattern_base + ".xlsx"))
+        files = pq + xl
         if not files: return None
         def _d(f):
             m = re.search(r'(\d{8})', os.path.basename(f))
             return m.group(1) if m else '00000000'
-        return max(files, key=_d)
-    sp = _latest("PRIZE_SUM_OUT_*.xlsx")
-    bp = _latest("PRIZE_6_BRIDGE_OUT_*.xlsx")
+        # 가장 최신 날짜 그룹 추출
+        latest_date = max(_d(f) for f in files)
+        same_date = [f for f in files if _d(f) == latest_date]
+        # parquet 우선
+        for f in same_date:
+            if f.lower().endswith('.parquet'):
+                return f
+        return same_date[0]
+    sp = _latest("PRIZE_SUM_OUT_*")
+    bp = _latest("PRIZE_6_BRIDGE_OUT_*")
     dd = None
     if sp:
         m = re.search(r'(\d{8})', os.path.basename(sp))
@@ -108,7 +118,14 @@ def find_latest_files():
 @st.cache_data(show_spinner="데이터를 로딩하고 있습니다...")
 def load_and_merge(sum_path, bridge_path, cache_ver=None):
     def _read(path):
-        df = pd.read_excel(path)
+        # parquet 우선, xlsx는 calamine -> openpyxl 폴백
+        if path and path.lower().endswith('.parquet'):
+            df = pd.read_parquet(path)
+        else:
+            try:
+                df = pd.read_excel(path, engine='calamine')
+            except Exception:
+                df = pd.read_excel(path, engine='openpyxl')
         df.columns = [_clean_excel_text(str(c)) if isinstance(c, str) else c for c in df.columns]
         for col in df.columns:
             if df[col].dtype == 'object' or pd.api.types.is_string_dtype(df[col]):
